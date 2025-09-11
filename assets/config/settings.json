@@ -1,0 +1,9 @@
+{
+  "api": {
+    "base_url": "https://your-api-domain.com",
+    "endpoints": {
+      "create_user": "/api/auth/create-user/",
+      "verify_user": "/api/auth/verify-user/"
+    }
+  }
+}
