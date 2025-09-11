@@ -1,7 +1,99 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import 'phone_input_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
+
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Refrescar datos del usuario al cargar la pantalla
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AuthProvider>(context, listen: false).refreshUserData();
+    });
+  }
+
+  Future<void> _logout() async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Cerrar Sesión'),
+          content: const Text('¿Estás seguro que deseas cerrar sesión?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                await authProvider.logout();
+                
+                if (mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const PhoneInputScreen()),
+                    (route) => false,
+                  );
+                }
+              },
+              child: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showStoredData() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final allData = await authProvider.getStoredData();
+    
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Datos Almacenados'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('📱 Teléfono: ${allData['phone_number'] ?? 'No guardado'}'),
+                  const SizedBox(height: 8),
+                  Text('🔢 Código: ${allData['verification_code'] ?? 'No guardado'}'),
+                  const SizedBox(height: 8),
+                  Text('🔐 Token: ${allData['access_token'] != null ? '${allData['access_token'].toString().substring(0, 20)}...' : 'No guardado'}'),
+                  const SizedBox(height: 8),
+                  Text('🔄 Refresh Token: ${allData['refresh_token'] != null ? '${allData['refresh_token'].toString().substring(0, 20)}...' : 'No guardado'}'),
+                  const SizedBox(height: 8),
+                  Text('✅ Logueado: ${allData['is_logged_in'] ?? false}'),
+                  const SizedBox(height: 8),
+                  const Text('💡 Refresh token válido por 10 días'),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cerrar'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -9,123 +101,153 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              SizedBox(height: 60),
-              
-              // Success icon
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(25),
-                  gradient: LinearGradient(
-                    colors: [Colors.green, Colors.blue],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Icon(
-                  Icons.check_circle_outline,
-                  color: Colors.white,
-                  size: 50,
-                ),
-              ),
-              SizedBox(height: 40),
-              
-              // Welcome title
-              Text(
-                '¡Bienvenido!',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: 16),
-              
-              // Success message
-              Text(
-                'Tu número de teléfono ha sido verificado exitosamente',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 60),
-              
-              // Feature cards
-              Expanded(
-                child: ListView(
-                  children: [
-                    _buildFeatureCard(
-                      icon: Icons.security,
-                      title: 'Cuenta Verificada',
-                      description: 'Tu cuenta está completamente verificada y segura',
-                      color: Colors.green,
-                    ),
-                    SizedBox(height: 16),
-                    _buildFeatureCard(
-                      icon: Icons.notifications,
-                      title: 'Notificaciones',
-                      description: 'Recibe notificaciones importantes en tu teléfono',
-                      color: Colors.blue,
-                    ),
-                    SizedBox(height: 16),
-                    _buildFeatureCard(
-                      icon: Icons.support_agent,
-                      title: 'Soporte 24/7',
-                      description: 'Nuestro equipo está disponible para ayudarte',
-                      color: Colors.purple,
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Continue button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Navigate to main app or show more features
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('¡Listo para comenzar!')),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Container(
+          padding: const EdgeInsets.all(24.0),
+          child: Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              if (authProvider.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              return Column(
+                children: [
+                  const SizedBox(height: 60),
+                  
+                  // Success icon
+                  Container(
+                    width: 100,
+                    height: 100,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      borderRadius: BorderRadius.circular(25),
+                      gradient: const LinearGradient(
                         colors: [Colors.green, Colors.blue],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Center(
-                      child: Text(
-                        'Comenzar',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                    child: const Icon(
+                      Icons.check_circle_outline,
+                      color: Colors.white,
+                      size: 50,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  
+                  // Welcome title
+                  const Text(
+                    '¡Bienvenido!',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // User info
+                  if (authProvider.userData != null)
+                    Text(
+                      authProvider.userData!.username,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.blue,
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  
+                  // Success message
+                  Text(
+                    'Tu número de teléfono ha sido verificado exitosamente',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 60),
+                  
+                  // Feature cards
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        _buildFeatureCard(
+                          icon: Icons.security,
+                          title: 'Cuenta Verificada',
+                          description: 'Tu cuenta está completamente verificada y segura',
+                          color: Colors.green,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildFeatureCard(
+                          icon: Icons.phone,
+                          title: 'Teléfono: ${authProvider.phoneNumber ?? 'No disponible'}',
+                          description: 'Número de teléfono verificado',
+                          color: Colors.blue,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildFeatureCard(
+                          icon: Icons.token,
+                          title: 'Tokens Activos',
+                          description: 'Access token y refresh token guardados (10 días)',
+                          color: Colors.purple,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildFeatureCard(
+                          icon: Icons.storage,
+                          title: 'Ver Datos Guardados',
+                          description: 'Toca para ver todos los datos almacenados',
+                          color: Colors.orange,
+                          onTap: _showStoredData,
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Logout button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _logout,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Colors.red, Colors.orange],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.logout, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text(
+                                'Cerrar Sesión',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
-              SizedBox(height: 20),
-            ],
+                  const SizedBox(height: 20),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -137,54 +259,58 @@ class HomeScreen extends StatelessWidget {
     required String title,
     required String description,
     required Color color,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: color.withAlpha(25),
-              borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: color.withAlpha(25),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
+              ),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 24,
-            ),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
                   ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
-import '../services/auth_service.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/verification_provider.dart';
 import 'home_screen.dart';
 
 class VerificationScreen extends StatefulWidget {
@@ -13,21 +14,20 @@ class VerificationScreen extends StatefulWidget {
 }
 
 class _VerificationScreenState extends State<VerificationScreen> {
-  List<TextEditingController> _controllers = List.generate(6, (index) => TextEditingController());
-  List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
-  bool _isLoading = false;
-  int _resendTimer = 55;
-  Timer? _timer;
+  final List<TextEditingController> _controllers = List.generate(6, (index) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
 
   @override
   void initState() {
     super.initState();
-    _startResendTimer();
+    // Iniciar el timer cuando se carga la pantalla
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<VerificationProvider>(context, listen: false).startResendTimer();
+    });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     for (var controller in _controllers) {
       controller.dispose();
     }
@@ -37,33 +37,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
     super.dispose();
   }
 
-  void _startResendTimer() {
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (_resendTimer > 0) {
-        setState(() {
-          _resendTimer--;
-        });
-      } else {
-        timer.cancel();
-      }
-    });
-  }
-
-  void _resendCode() async {
-    if (_resendTimer > 0) return;
-    
-    final success = await AuthService.createUser(widget.phoneNumber);
-    if (success) {
-      setState(() {
-        _resendTimer = 55;
-      });
-      _startResendTimer();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Código reenviado')),
-      );
-    }
-  }
-
   void _onCodeChanged(String value, int index) {
     if (value.length == 1 && index < 5) {
       _focusNodes[index + 1].requestFocus();
@@ -71,48 +44,70 @@ class _VerificationScreenState extends State<VerificationScreen> {
       _focusNodes[index - 1].requestFocus();
     }
     
-    // Auto verify when all fields are filled
-    if (_controllers.every((controller) => controller.text.isNotEmpty)) {
+    // Auto verificar cuando todos los campos están llenos
+    final verificationProvider = Provider.of<VerificationProvider>(context, listen: false);
+    final codeDigits = _controllers.map((controller) => controller.text).toList();
+    
+    if (verificationProvider.isCodeComplete(codeDigits)) {
       _verifyCode();
     }
   }
 
   Future<void> _verifyCode() async {
-    String code = _controllers.map((controller) => controller.text).join();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final verificationProvider = Provider.of<VerificationProvider>(context, listen: false);
     
-    if (code.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Por favor ingresa el código completo')),
-      );
+    final codeDigits = _controllers.map((controller) => controller.text).toList();
+    final code = verificationProvider.getCodeAsString(codeDigits);
+    
+    if (!verificationProvider.isCodeComplete(codeDigits)) {
+      _showMessage('Por favor ingresa el código completo', isError: true);
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    verificationProvider.setVerifying(true);
+    
+    final success = await authProvider.verifyCode(widget.phoneNumber, code);
+    
+    verificationProvider.setVerifying(false);
 
-    final success = await AuthService.verifyUser(widget.phoneNumber, code);
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (success) {
+    if (success && mounted) {
+      _showMessage('✅ Verificación exitosa', isError: false);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
-    } else {
-      // Clear the code fields
+    } else if (mounted) {
+      // Limpiar campos en caso de error
       for (var controller in _controllers) {
         controller.clear();
       }
       _focusNodes[0].requestFocus();
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Código incorrecto. Intenta nuevamente.')),
-      );
+      final errorMessage = authProvider.errorMessage ?? 'Código incorrecto. Intenta nuevamente.';
+      _showMessage(errorMessage, isError: true);
     }
+  }
+
+  Future<void> _resendCode() async {
+    final verificationProvider = Provider.of<VerificationProvider>(context, listen: false);
+    
+    final success = await verificationProvider.resendCode(widget.phoneNumber);
+    
+    if (success && mounted) {
+      _showMessage('Código reenviado', isError: false);
+    } else if (mounted) {
+      _showMessage('Error al reenviar código', isError: true);
+    }
+  }
+
+  void _showMessage(String message, {required bool isError}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
   }
 
   @override
@@ -121,10 +116,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
-              Spacer(),
+              const Spacer(),
               
               // Icon
               Container(
@@ -132,22 +127,22 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 height: 80,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     colors: [Colors.green, Colors.blue],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.security,
                   color: Colors.white,
                   size: 40,
                 ),
               ),
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
               
               // Title
-              Text(
+              const Text(
                 'Código de verificación',
                 style: TextStyle(
                   fontSize: 28,
@@ -155,7 +150,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   color: Colors.black87,
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               
               // Subtitle
               RichText(
@@ -166,10 +161,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
                     color: Colors.grey[600],
                   ),
                   children: [
-                    TextSpan(text: 'Hemos enviado un código de 6 dígitos a\n'),
+                    const TextSpan(text: 'Hemos enviado un código de 6 dígitos a\n'),
                     TextSpan(
                       text: widget.phoneNumber,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.blue,
                         fontWeight: FontWeight.w600,
                       ),
@@ -177,10 +172,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   ],
                 ),
               ),
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
               
               // Code input instruction
-              Text(
+              const Text(
                 'Ingresa el código recibido',
                 style: TextStyle(
                   fontSize: 16,
@@ -188,7 +183,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   color: Colors.black87,
                 ),
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               
               // Code input fields
               Row(
@@ -212,11 +207,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
                       textAlign: TextAlign.center,
                       keyboardType: TextInputType.number,
                       maxLength: 1,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         border: InputBorder.none,
                         counterText: '',
                       ),
@@ -225,88 +220,102 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   );
                 }),
               ),
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
               
               // Verify button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _verifyCode,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.green, Colors.blue],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Center(
-                      child: _isLoading
-                          ? CircularProgressIndicator(color: Colors.white)
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.security, color: Colors.white),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Verificar código',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                SizedBox(width: 8),
-                                Icon(Icons.arrow_forward, color: Colors.white),
-                              ],
-                            ),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 32),
-              
-              // Resend section
-              Text(
-                _resendTimer > 0 
-                    ? 'Reenviar código en ${_resendTimer}s'
-                    : 'No recibiste el código?',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-              SizedBox(height: 8),
-              
-              if (_resendTimer == 0)
-                TextButton(
-                  onPressed: _resendCode,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.refresh, size: 18),
-                      SizedBox(width: 4),
-                      Text(
-                        'Reenviar código',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+              Consumer2<AuthProvider, VerificationProvider>(
+                builder: (context, authProvider, verificationProvider, child) {
+                  final isLoading = authProvider.isLoading || verificationProvider.isVerifying;
+                  
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: isLoading ? null : _verifyCode,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                    ],
-                  ),
-                ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Colors.green, Colors.blue],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Center(
+                          child: isLoading
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.security, color: Colors.white),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Verificar código',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.arrow_forward, color: Colors.white),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 32),
               
-              Spacer(),
+              // Resend section
+              Consumer<VerificationProvider>(
+                builder: (context, verificationProvider, child) {
+                  return Column(
+                    children: [
+                      Text(
+                        verificationProvider.canResend 
+                            ? 'No recibiste el código?'
+                            : 'Reenviar código en ${verificationProvider.resendTimer}s',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      
+                      if (verificationProvider.canResend)
+                        TextButton(
+                          onPressed: _resendCode,
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.refresh, size: 18),
+                              SizedBox(width: 4),
+                              Text(
+                                'Reenviar código',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              
+              const Spacer(),
             ],
           ),
         ),
