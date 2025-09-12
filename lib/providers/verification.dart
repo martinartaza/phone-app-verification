@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
-import '../services/auth_service.dart';
+import '../services/auth.dart' as auth_service;
 
 class VerificationProvider extends ChangeNotifier {
   // Estado del timer de reenvío
@@ -42,7 +42,7 @@ class VerificationProvider extends ChangeNotifier {
     if (!_canResend) return false;
     
     try {
-      final success = await AuthService.createUser(phoneNumber);
+      final success = await auth_service.AuthService.createUser(phoneNumber);
       if (success) {
         startResendTimer();
         return true;

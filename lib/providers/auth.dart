@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import '../services/auth_service.dart';
-import '../services/storage_service.dart';
+import '../services/auth.dart' as auth_service;
+import '../services/storage.dart' as storage_service;
 import '../models/auth_response.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -30,12 +30,10 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     
     try {
-      print('🔄 Inicializando AuthProvider...');
-      
       // Verificar si hay datos guardados (teléfono y código)
-      final phoneNumber = await StorageService.getPhoneNumber();
-      final verificationCode = await StorageService.getVerificationCode();
-      final isLoggedIn = await StorageService.isLoggedIn();
+      final phoneNumber = await storage_service.StorageService.getPhoneNumber();
+      final verificationCode = await storage_service.StorageService.getVerificationCode();
+      final isLoggedIn = await storage_service.StorageService.isLoggedIn();
       
       print('🔍 Verificando datos locales:');
       print('  - phoneNumber: $phoneNumber');
@@ -47,16 +45,12 @@ class AuthProvider extends ChangeNotifier {
         _isAuthenticated = true;
         _phoneNumber = phoneNumber;
         _userData = await _getUserDataFromStorage();
-        print('✅ Datos locales encontrados, ir al Home para verificar con servidor');
       } else {
         _isAuthenticated = false;
-        print('❌ No hay datos locales, ir al login');
       }
       
       _isInitialized = true;
-      print('✅ AuthProvider inicializado correctamente');
     } catch (e) {
-      print('❌ Error inicializando AuthProvider: $e');
       _setError('Error inicializando autenticación: $e');
       _isInitialized = true; // Marcar como inicializado aunque haya error
     } finally {
@@ -70,7 +64,7 @@ class AuthProvider extends ChangeNotifier {
     _clearError();
     
     try {
-      final success = await AuthService.createUser(phoneNumber);
+      final success = await auth_service.AuthService.createUser(phoneNumber);
       if (success) {
         _phoneNumber = phoneNumber;
         notifyListeners();
@@ -93,7 +87,7 @@ class AuthProvider extends ChangeNotifier {
     _clearError();
     
     try {
-      final authResponse = await AuthService.verifyUser(phoneNumber, code);
+      final authResponse = await auth_service.AuthService.verifyUser(phoneNumber, code);
       
       if (authResponse != null && authResponse.isSuccess) {
         _isAuthenticated = true;
@@ -118,7 +112,7 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     
     try {
-      await AuthService.logout();
+      await auth_service.AuthService.logout();
       _isAuthenticated = false;
       _phoneNumber = null;
       _userData = null;
@@ -145,7 +139,7 @@ class AuthProvider extends ChangeNotifier {
 
   /// Obtener datos del usuario desde storage
   Future<UserData?> _getUserDataFromStorage() async {
-    final userData = await StorageService.getUserData();
+    final userData = await storage_service.StorageService.getUserData();
     if (userData != null) {
       return UserData.fromJson(userData);
     }
@@ -154,7 +148,7 @@ class AuthProvider extends ChangeNotifier {
 
   /// Obtener todos los datos almacenados (para debug)
   Future<Map<String, dynamic>> getStoredData() async {
-    return await StorageService.getAllStoredData();
+    return await storage_service.StorageService.getAllStoredData();
   }
 
   /// Verificar con el servidor usando datos guardados
@@ -164,24 +158,19 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     
     try {
-      print('🔄 Verificando con servidor usando datos guardados...');
-      
-      final reVerifyResponse = await AuthService.reVerifyWithStoredData();
+      final reVerifyResponse = await auth_service.AuthService.reVerifyWithStoredData();
       
       if (reVerifyResponse != null && reVerifyResponse.isSuccess) {
         // El servidor confirmó que los datos son válidos
         _userData = reVerifyResponse.data;
-        print('✅ Servidor confirmó validez, tokens actualizados');
         notifyListeners();
         return true;
       } else {
         // El servidor rechazó los datos (pueden haber expirado)
-        print('❌ Servidor rechazó verificación, limpiando datos');
         await logout();
         return false;
       }
     } catch (e) {
-      print('❌ Error verificando con servidor: $e');
       _setError('Error verificando con servidor: $e');
       // En caso de error de red, mantener sesión local
       return true;

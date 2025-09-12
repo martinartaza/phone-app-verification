@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../services/storage_service.dart';
+import '../services/storage.dart' as storage_service;
 
 class PhoneInputProvider extends ChangeNotifier {
   // Estado del formulario
@@ -32,7 +32,7 @@ class PhoneInputProvider extends ChangeNotifier {
   /// Cargar número de teléfono guardado si existe
   Future<void> _loadSavedPhoneNumber() async {
     try {
-      final savedPhoneNumber = await StorageService.getPhoneNumber();
+      final savedPhoneNumber = await storage_service.StorageService.getPhoneNumber();
       if (savedPhoneNumber != null) {
         // Extraer código de país y número
         for (var country in _countries) {
@@ -43,10 +43,10 @@ class PhoneInputProvider extends ChangeNotifier {
             break;
           }
         }
-        debugPrint('📱 Número de teléfono cargado: $savedPhoneNumber');
+
       }
     } catch (e) {
-      debugPrint('❌ Error cargando número guardado: $e');
+
     }
   }
 
@@ -59,18 +59,14 @@ class PhoneInputProvider extends ChangeNotifier {
 
   /// Actualizar número de teléfono
   void setPhoneNumber(String phoneNumber) {
-    print('📱 PhoneInputProvider.setPhoneNumber: "$phoneNumber"');
     _phoneNumber = phoneNumber;
     _clearError();
     notifyListeners();
-    print('📱 Estado actualizado - fullPhoneNumber: $fullPhoneNumber');
   }
 
   /// Validar número de teléfono
   bool isPhoneNumberValid() {
-    final isValid = _phoneNumber.isNotEmpty && _phoneNumber.length >= 7;
-    print('🔍 Validando teléfono: "$_phoneNumber" (length: ${_phoneNumber.length}) -> válido: $isValid');
-    return isValid;
+    return _phoneNumber.isNotEmpty && _phoneNumber.length >= 7;
   }
 
   /// Obtener mensaje de error de validación

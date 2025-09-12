@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'screens/phone_input_screen.dart';
-import 'screens/home_screen.dart';
-import 'providers/auth_provider.dart';
-import 'providers/phone_input_provider.dart';
-import 'providers/verification_provider.dart';
+import 'screens/phone_input.dart';
+import 'screens/home.dart';
+import 'providers/auth.dart' as auth_provider;
+import 'providers/phone_input.dart' as phone_input_provider;
+import 'providers/verification.dart' as verification_provider;
 
 void main() {
   runApp(const PhoneVerificationApp());
@@ -17,9 +17,9 @@ class PhoneVerificationApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => PhoneInputProvider()),
-        ChangeNotifierProvider(create: (_) => VerificationProvider()),
+        ChangeNotifierProvider(create: (_) => auth_provider.AuthProvider()),
+        ChangeNotifierProvider(create: (_) => phone_input_provider.PhoneInputProvider()),
+        ChangeNotifierProvider(create: (_) => verification_provider.VerificationProvider()),
       ],
       child: MaterialApp(
         title: 'Phone Verification',
@@ -54,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(milliseconds: 500));
     
     if (mounted) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
       
       // Esperar a que termine la inicialización del AuthProvider
       while (!authProvider.isInitialized) {
@@ -62,19 +62,12 @@ class _SplashScreenState extends State<SplashScreen> {
         if (!mounted) return;
       }
       
-      print('🔍 Estado de autenticación verificado:');
-      print('  - isAuthenticated: ${authProvider.isAuthenticated}');
-      print('  - phoneNumber: ${authProvider.phoneNumber}');
-      print('  - userData: ${authProvider.userData?.username}');
-      
       if (authProvider.isAuthenticated) {
-        print('✅ Usuario ya autenticado, navegando al home');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       } else {
-        print('❌ Usuario no autenticado, navegando al login');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const PhoneInputScreen()),
@@ -127,7 +120,7 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 16),
             
             // Loading text
-            Consumer<AuthProvider>(
+            Consumer<auth_provider.AuthProvider>(
               builder: (context, authProvider, child) {
                 String statusText = 'Verificando datos locales...';
                 if (authProvider.isLoading) {

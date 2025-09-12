@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-import 'phone_input_screen.dart';
+import '../providers/auth.dart' as auth_provider;
+import 'phone_input.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -21,16 +21,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _checkTokensAndRefreshData() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-    print('🏠 Home cargado, verificando con servidor...');
+    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
     
     // SIEMPRE verificar con el servidor usando datos guardados
     final serverResponse = await authProvider.verifyWithServer();
     
     if (!serverResponse && mounted) {
       // El servidor rechazó los datos, ir al login
-      print('❌ Servidor rechazó verificación, ir al login');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('⚠️ Sesión expirada, por favor inicia sesión nuevamente'),
@@ -46,7 +43,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     
-    print('✅ Servidor confirmó validez, refrescando datos');
     // Refrescar datos del usuario
     await authProvider.refreshUserData();
   }
@@ -66,7 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
             TextButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
                 await authProvider.logout();
                 
                 if (mounted) {
@@ -86,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _showStoredData() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
     final allData = await authProvider.getStoredData();
     
     if (mounted) {
@@ -127,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _renewTokens() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
     
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('🔄 Renovando tokens...')),
@@ -168,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: Consumer<AuthProvider>(
+          child: Consumer<auth_provider.AuthProvider>(
             builder: (context, authProvider, child) {
               if (authProvider.isLoading) {
                 return const Center(child: CircularProgressIndicator());

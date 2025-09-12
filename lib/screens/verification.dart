@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-import '../providers/verification_provider.dart';
-import 'home_screen.dart';
+import '../providers/auth.dart' as auth_provider;
+import '../providers/verification.dart' as verification_provider;
+import 'home.dart';
 
 class VerificationScreen extends StatefulWidget {
   final String phoneNumber;
@@ -22,7 +22,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
     super.initState();
     // Iniciar el timer cuando se carga la pantalla
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<VerificationProvider>(context, listen: false).startResendTimer();
+      Provider.of<verification_provider.VerificationProvider>(context, listen: false).startResendTimer();
     });
   }
 
@@ -45,7 +45,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
     }
     
     // Auto verificar cuando todos los campos están llenos
-    final verificationProvider = Provider.of<VerificationProvider>(context, listen: false);
+    final verificationProvider = Provider.of<verification_provider.VerificationProvider>(context, listen: false);
     final codeDigits = _controllers.map((controller) => controller.text).toList();
     
     if (verificationProvider.isCodeComplete(codeDigits)) {
@@ -54,8 +54,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   Future<void> _verifyCode() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final verificationProvider = Provider.of<VerificationProvider>(context, listen: false);
+    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+    final verificationProvider = Provider.of<verification_provider.VerificationProvider>(context, listen: false);
     
     final codeDigits = _controllers.map((controller) => controller.text).toList();
     final code = verificationProvider.getCodeAsString(codeDigits);
@@ -90,7 +90,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   Future<void> _resendCode() async {
-    final verificationProvider = Provider.of<VerificationProvider>(context, listen: false);
+    final verificationProvider = Provider.of<verification_provider.VerificationProvider>(context, listen: false);
     
     final success = await verificationProvider.resendCode(widget.phoneNumber);
     
@@ -223,7 +223,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
               const SizedBox(height: 40),
               
               // Verify button
-              Consumer2<AuthProvider, VerificationProvider>(
+              Consumer2<auth_provider.AuthProvider, verification_provider.VerificationProvider>(
                 builder: (context, authProvider, verificationProvider, child) {
                   final isLoading = authProvider.isLoading || verificationProvider.isVerifying;
                   
@@ -277,7 +277,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
               const SizedBox(height: 32),
               
               // Resend section
-              Consumer<VerificationProvider>(
+              Consumer<verification_provider.VerificationProvider>(
                 builder: (context, verificationProvider, child) {
                   return Column(
                     children: [

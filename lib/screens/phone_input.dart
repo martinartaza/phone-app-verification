@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-import '../providers/phone_input_provider.dart';
-import 'verification_screen.dart';
+import '../providers/auth.dart' as auth_provider;
+import '../providers/phone_input.dart' as phone_input_provider;
+import 'verification.dart';
 
 class PhoneInputScreen extends StatelessWidget {
   const PhoneInputScreen({Key? key}) : super(key: key);
@@ -72,7 +72,7 @@ class PhoneInputScreen extends StatelessWidget {
               const SizedBox(height: 12),
               
               // Country Dropdown
-              Consumer<PhoneInputProvider>(
+              Consumer<phone_input_provider.PhoneInputProvider>(
                 builder: (context, phoneProvider, child) {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -122,7 +122,7 @@ class PhoneInputScreen extends StatelessWidget {
               const SizedBox(height: 12),
               
               // Phone Input Row
-              Consumer<PhoneInputProvider>(
+              Consumer<phone_input_provider.PhoneInputProvider>(
                 builder: (context, phoneProvider, child) {
                   return Row(
                     children: [
@@ -173,7 +173,7 @@ class PhoneInputScreen extends StatelessWidget {
               const Spacer(),
               
               // Send button
-              Consumer2<AuthProvider, PhoneInputProvider>(
+              Consumer2<auth_provider.AuthProvider, phone_input_provider.PhoneInputProvider>(
                 builder: (context, authProvider, phoneProvider, child) {
                   return SizedBox(
                     width: double.infinity,
@@ -231,34 +231,19 @@ class PhoneInputScreen extends StatelessWidget {
   }
 
   Future<void> _sendCode(BuildContext context) async {
-    print('\n=== _sendCode MÉTODO INICIADO ===');
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final phoneProvider = Provider.of<PhoneInputProvider>(context, listen: false);
-    
-    print('📱 Datos del formulario:');
-    print('  - selectedCountryCode: ${phoneProvider.selectedCountryCode}');
-    print('  - phoneNumber: ${phoneProvider.phoneNumber}');
-    print('  - fullPhoneNumber: ${phoneProvider.fullPhoneNumber}');
-    print('  - isPhoneNumberValid: ${phoneProvider.isPhoneNumberValid()}');
+    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+    final phoneProvider = Provider.of<phone_input_provider.PhoneInputProvider>(context, listen: false);
     
     // Validar número
     if (!phoneProvider.isPhoneNumberValid()) {
-      final errorMsg = phoneProvider.getValidationError() ?? 'Número inválido';
-      print('❌ Validación falló: $errorMsg');
-      phoneProvider.setError(errorMsg);
+      phoneProvider.setError(phoneProvider.getValidationError() ?? 'Número inválido');
       return;
     }
-    
-    print('✅ Validación exitosa, enviando código...');
     
     // Enviar código
     final success = await authProvider.sendVerificationCode(phoneProvider.fullPhoneNumber);
     
-    print('📤 Resultado del envío: $success');
-    
     if (success && context.mounted) {
-      print('✅ Éxito, navegando a verificación');
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -266,7 +251,6 @@ class PhoneInputScreen extends StatelessWidget {
         ),
       );
     } else if (context.mounted) {
-      print('❌ Error, mostrando mensaje');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Error al enviar el código'),
@@ -274,7 +258,5 @@ class PhoneInputScreen extends StatelessWidget {
         ),
       );
     }
-    
-    print('=== _sendCode MÉTODO TERMINADO ===\n');
   }
 }
