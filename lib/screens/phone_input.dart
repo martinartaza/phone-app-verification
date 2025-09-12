@@ -60,9 +60,9 @@ class PhoneInputScreen extends StatelessWidget {
               ),
               const SizedBox(height: 40),
               
-              // Country selector
+              // Country selector (deshabilitado por ahora, preparado para expansión)
               const Text(
-                'Selecciona tu país',
+                'País',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -71,12 +71,13 @@ class PhoneInputScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               
-              // Country Dropdown
+              // Country Dropdown (deshabilitado)
               Consumer<phone_input_provider.PhoneInputProvider>(
                 builder: (context, phoneProvider, child) {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     decoration: BoxDecoration(
+                      color: Colors.grey[100], // Fondo gris para indicar deshabilitado
                       border: Border.all(color: Colors.grey[300]!),
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -84,6 +85,8 @@ class PhoneInputScreen extends StatelessWidget {
                       child: DropdownButton<String>(
                         value: phoneProvider.selectedCountryCode,
                         isExpanded: true,
+                        // Deshabilitado por ahora, cambiar a null para habilitar
+                        onChanged: null, // phoneProvider.setCountryCode,
                         items: phoneProvider.countries.map((country) {
                           return DropdownMenuItem<String>(
                             value: country['code'],
@@ -91,18 +94,26 @@ class PhoneInputScreen extends StatelessWidget {
                               children: [
                                 Text(country['flag']!, style: const TextStyle(fontSize: 20)),
                                 const SizedBox(width: 12),
-                                Text(country['name']!),
+                                Text(
+                                  country['name']!,
+                                  style: TextStyle(
+                                    color: country['code'] == phoneProvider.selectedCountryCode
+                                        ? Colors.black87
+                                        : Colors.grey[600],
+                                  ),
+                                ),
                                 const Spacer(),
-                                Text(country['code']!, style: TextStyle(color: Colors.grey[600])),
+                                Text(
+                                  country['code']!,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ],
                             ),
                           );
                         }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            phoneProvider.setCountryCode(value);
-                          }
-                        },
                       ),
                     ),
                   );
@@ -110,9 +121,85 @@ class PhoneInputScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               
+              // Province selector (solo para Argentina)
+              Consumer<phone_input_provider.PhoneInputProvider>(
+                builder: (context, phoneProvider, child) {
+                  if (!phoneProvider.shouldShowProvinces) {
+                    return const SizedBox.shrink(); // No mostrar si no es Argentina
+                  }
+                  
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Provincia',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Province Dropdown
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: phoneProvider.selectedProvinceCode.isEmpty 
+                                ? '' 
+                                : phoneProvider.selectedProvinceCode,
+                            isExpanded: true,
+                            hint: const Text('Seleccionar provincia'),
+                            items: phoneProvider.provinces.map((province) {
+                              return DropdownMenuItem<String>(
+                                value: province['code'],
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        province['name']!,
+                                        style: TextStyle(
+                                          color: province['code']!.isEmpty 
+                                              ? Colors.grey[600] 
+                                              : Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                    if (province['code']!.isNotEmpty)
+                                      Text(
+                                        '9${province['code']}',
+                                        style: TextStyle(
+                                          color: Colors.blue[600],
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                phoneProvider.setProvince(value);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              
               // Phone input
               const Text(
-                'Número de teléfono',
+                'Número de teléfono sin el 15',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -146,8 +233,16 @@ class PhoneInputScreen extends StatelessWidget {
                         child: TextField(
                           onChanged: phoneProvider.setPhoneNumber,
                           keyboardType: TextInputType.phone,
+                          controller: TextEditingController(text: phoneProvider.phoneNumber)
+                            ..selection = TextSelection.fromPosition(
+                              TextPosition(offset: phoneProvider.phoneNumber.length),
+                            ),
                           decoration: InputDecoration(
-                            hintText: '123456789',
+                            hintText: phoneProvider.isArgentina
+                                ? (phoneProvider.selectedProvinceCode.isEmpty 
+                                    ? 'Selecciona una provincia primero'
+                                    : '9${phoneProvider.selectedProvinceCode}1234567')
+                                : '123456789',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(color: Colors.grey[300]!),
@@ -162,6 +257,13 @@ class PhoneInputScreen extends StatelessWidget {
                             ),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                             errorText: phoneProvider.errorMessage,
+                            helperText: phoneProvider.isArgentina && phoneProvider.selectedProvinceCode.isNotEmpty 
+                                ? 'Puedes editar el código de área si es necesario'
+                                : null,
+                            helperStyle: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
                           ),
                         ),
                       ),
