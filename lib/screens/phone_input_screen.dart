@@ -231,19 +231,34 @@ class PhoneInputScreen extends StatelessWidget {
   }
 
   Future<void> _sendCode(BuildContext context) async {
+    print('\n=== _sendCode MÉTODO INICIADO ===');
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final phoneProvider = Provider.of<PhoneInputProvider>(context, listen: false);
     
+    print('📱 Datos del formulario:');
+    print('  - selectedCountryCode: ${phoneProvider.selectedCountryCode}');
+    print('  - phoneNumber: ${phoneProvider.phoneNumber}');
+    print('  - fullPhoneNumber: ${phoneProvider.fullPhoneNumber}');
+    print('  - isPhoneNumberValid: ${phoneProvider.isPhoneNumberValid()}');
+    
     // Validar número
     if (!phoneProvider.isPhoneNumberValid()) {
-      phoneProvider.setError(phoneProvider.getValidationError() ?? 'Número inválido');
+      final errorMsg = phoneProvider.getValidationError() ?? 'Número inválido';
+      print('❌ Validación falló: $errorMsg');
+      phoneProvider.setError(errorMsg);
       return;
     }
+    
+    print('✅ Validación exitosa, enviando código...');
     
     // Enviar código
     final success = await authProvider.sendVerificationCode(phoneProvider.fullPhoneNumber);
     
+    print('📤 Resultado del envío: $success');
+    
     if (success && context.mounted) {
+      print('✅ Éxito, navegando a verificación');
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -251,6 +266,7 @@ class PhoneInputScreen extends StatelessWidget {
         ),
       );
     } else if (context.mounted) {
+      print('❌ Error, mostrando mensaje');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Error al enviar el código'),
@@ -258,5 +274,7 @@ class PhoneInputScreen extends StatelessWidget {
         ),
       );
     }
+    
+    print('=== _sendCode MÉTODO TERMINADO ===\n');
   }
 }

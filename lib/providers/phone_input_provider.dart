@@ -59,14 +59,18 @@ class PhoneInputProvider extends ChangeNotifier {
 
   /// Actualizar número de teléfono
   void setPhoneNumber(String phoneNumber) {
+    print('📱 PhoneInputProvider.setPhoneNumber: "$phoneNumber"');
     _phoneNumber = phoneNumber;
     _clearError();
     notifyListeners();
+    print('📱 Estado actualizado - fullPhoneNumber: $fullPhoneNumber');
   }
 
   /// Validar número de teléfono
   bool isPhoneNumberValid() {
-    return _phoneNumber.isNotEmpty && _phoneNumber.length >= 7;
+    final isValid = _phoneNumber.isNotEmpty && _phoneNumber.length >= 7;
+    print('🔍 Validando teléfono: "$_phoneNumber" (length: ${_phoneNumber.length}) -> válido: $isValid');
+    return isValid;
   }
 
   /// Obtener mensaje de error de validación

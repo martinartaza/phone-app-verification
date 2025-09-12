@@ -31,13 +31,26 @@ class AuthProvider extends ChangeNotifier {
     
     try {
       print('🔄 Inicializando AuthProvider...');
-      _isAuthenticated = await AuthService.isAuthenticated();
-      print('🔍 isAuthenticated: $_isAuthenticated');
       
-      if (_isAuthenticated) {
-        _phoneNumber = await StorageService.getPhoneNumber();
+      // Verificar si hay datos guardados (teléfono y código)
+      final phoneNumber = await StorageService.getPhoneNumber();
+      final verificationCode = await StorageService.getVerificationCode();
+      final isLoggedIn = await StorageService.isLoggedIn();
+      
+      print('🔍 Verificando datos locales:');
+      print('  - phoneNumber: $phoneNumber');
+      print('  - verificationCode: $verificationCode');
+      print('  - isLoggedIn: $isLoggedIn');
+      
+      // Si hay datos guardados, considerar como autenticado para ir al Home
+      if (phoneNumber != null && verificationCode != null && isLoggedIn) {
+        _isAuthenticated = true;
+        _phoneNumber = phoneNumber;
         _userData = await _getUserDataFromStorage();
-        print('📱 Datos cargados - Teléfono: $_phoneNumber, Usuario: ${_userData?.username}');
+        print('✅ Datos locales encontrados, ir al Home para verificar con servidor');
+      } else {
+        _isAuthenticated = false;
+        print('❌ No hay datos locales, ir al login');
       }
       
       _isInitialized = true;
@@ -142,6 +155,45 @@ class AuthProvider extends ChangeNotifier {
   /// Obtener todos los datos almacenados (para debug)
   Future<Map<String, dynamic>> getStoredData() async {
     return await StorageService.getAllStoredData();
+  }
+
+  /// Verificar con el servidor usando datos guardados
+  Future<bool> verifyWithServer() async {
+    if (!_isAuthenticated) return false;
+    
+    _setLoading(true);
+    
+    try {
+      print('🔄 Verificando con servidor usando datos guardados...');
+      
+      final reVerifyResponse = await AuthService.reVerifyWithStoredData();
+      
+      if (reVerifyResponse != null && reVerifyResponse.isSuccess) {
+        // El servidor confirmó que los datos son válidos
+        _userData = reVerifyResponse.data;
+        print('✅ Servidor confirmó validez, tokens actualizados');
+        notifyListeners();
+        return true;
+      } else {
+        // El servidor rechazó los datos (pueden haber expirado)
+        print('❌ Servidor rechazó verificación, limpiando datos');
+        await logout();
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error verificando con servidor: $e');
+      _setError('Error verificando con servidor: $e');
+      // En caso de error de red, mantener sesión local
+      return true;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Verificar y renovar tokens si es necesario (método manual)
+  Future<bool> checkAndRenewTokens() async {
+    // Este método ahora es solo para renovación manual
+    return await verifyWithServer();
   }
 
   // Métodos privados para manejo de estado

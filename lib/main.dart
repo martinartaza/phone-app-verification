@@ -129,13 +129,13 @@ class _SplashScreenState extends State<SplashScreen> {
             // Loading text
             Consumer<AuthProvider>(
               builder: (context, authProvider, child) {
-                String statusText = 'Verificando autenticación...';
+                String statusText = 'Verificando datos locales...';
                 if (authProvider.isLoading) {
-                  statusText = 'Cargando datos...';
+                  statusText = 'Cargando datos guardados...';
                 } else if (authProvider.isInitialized) {
                   statusText = authProvider.isAuthenticated 
-                      ? 'Usuario autenticado ✅' 
-                      : 'Redirigiendo al login...';
+                      ? 'Datos encontrados, ir al Home ✅' 
+                      : 'Sin datos, ir al login...';
                 }
                 
                 return Text(

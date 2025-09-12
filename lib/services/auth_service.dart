@@ -263,4 +263,49 @@ class AuthService {
       return false;
     }
   }
+
+  // Método para re-verificar automáticamente con datos guardados
+  static Future<AuthResponse?> reVerifyWithStoredData() async {
+    try {
+      final phoneNumber = await StorageService.getPhoneNumber();
+      final verificationCode = await StorageService.getVerificationCode();
+      
+      if (phoneNumber == null || verificationCode == null) {
+        print('❌ No hay datos guardados para re-verificar');
+        return null;
+      }
+      
+      print('🔄 Re-verificando con datos guardados:');
+      print('  - Teléfono: $phoneNumber');
+      print('  - Código: $verificationCode');
+      
+      // Usar el método verifyUser existente
+      return await verifyUser(phoneNumber, verificationCode);
+    } catch (e) {
+      print('❌ Error en re-verificación: $e');
+      return null;
+    }
+  }
+
+  // Método simplificado - solo verifica si hay datos locales
+  static Future<bool> hasLocalData() async {
+    try {
+      final isLoggedIn = await StorageService.isLoggedIn();
+      final phoneNumber = await StorageService.getPhoneNumber();
+      final verificationCode = await StorageService.getVerificationCode();
+      
+      final hasData = isLoggedIn && phoneNumber != null && verificationCode != null;
+      
+      print('🔍 Verificando datos locales:');
+      print('  - isLoggedIn: $isLoggedIn');
+      print('  - phoneNumber: $phoneNumber');
+      print('  - verificationCode: $verificationCode');
+      print('  - hasData: $hasData');
+      
+      return hasData;
+    } catch (e) {
+      print('❌ Error verificando datos locales: $e');
+      return false;
+    }
+  }
 }

@@ -14,10 +14,41 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Refrescar datos del usuario al cargar la pantalla
+    // Verificar y renovar tokens al cargar la pantalla
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AuthProvider>(context, listen: false).refreshUserData();
+      _checkTokensAndRefreshData();
     });
+  }
+
+  Future<void> _checkTokensAndRefreshData() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    print('🏠 Home cargado, verificando con servidor...');
+    
+    // SIEMPRE verificar con el servidor usando datos guardados
+    final serverResponse = await authProvider.verifyWithServer();
+    
+    if (!serverResponse && mounted) {
+      // El servidor rechazó los datos, ir al login
+      print('❌ Servidor rechazó verificación, ir al login');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ Sesión expirada, por favor inicia sesión nuevamente'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const PhoneInputScreen()),
+        (route) => false,
+      );
+      return;
+    }
+    
+    print('✅ Servidor confirmó validez, refrescando datos');
+    // Refrescar datos del usuario
+    await authProvider.refreshUserData();
   }
 
   Future<void> _logout() async {
@@ -92,6 +123,41 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       );
+    }
+  }
+
+  Future<void> _renewTokens() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('🔄 Renovando tokens...')),
+    );
+    
+    final success = await authProvider.checkAndRenewTokens();
+    
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Tokens renovados exitosamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Error renovando tokens'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        
+        // Si falló la renovación, ir al login
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const PhoneInputScreen()),
+          (route) => false,
+        );
+      }
     }
   }
 
@@ -197,6 +263,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           description: 'Toca para ver todos los datos almacenados',
                           color: Colors.orange,
                           onTap: _showStoredData,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildFeatureCard(
+                          icon: Icons.refresh,
+                          title: 'Renovar Tokens',
+                          description: 'Toca para renovar tokens manualmente',
+                          color: Colors.teal,
+                          onTap: _renewTokens,
                         ),
                       ],
                     ),

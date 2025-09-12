@@ -144,4 +144,67 @@ class StorageService {
       return true;
     }
   }
+
+  // Verificar si el token necesita renovación (próximo a vencer)
+  static Future<bool> shouldRenewToken() async {
+    final accessToken = await getAccessToken();
+    if (accessToken == null) return false;
+    
+    try {
+      final parts = accessToken.split('.');
+      if (parts.length != 3) return false;
+      
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final payloadMap = jsonDecode(decoded);
+      
+      final exp = payloadMap['exp'];
+      if (exp == null) return false;
+      
+      final expirationDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+      final now = DateTime.now();
+      
+      // Renovar si queda menos de 1 día para expirar
+      final hoursUntilExpiry = expirationDate.difference(now).inHours;
+      final shouldRenew = hoursUntilExpiry < 24;
+      
+      print('⏰ Token expira en $hoursUntilExpiry horas, Renovar: $shouldRenew');
+      
+      return shouldRenew;
+    } catch (e) {
+      print('❌ Error verificando renovación del token: $e');
+      return false;
+    }
+  }
+
+  // Verificar si el refresh token ha expirado (10 días)
+  static Future<bool> isRefreshTokenExpired() async {
+    final refreshToken = await getRefreshToken();
+    if (refreshToken == null) return true;
+    
+    try {
+      final parts = refreshToken.split('.');
+      if (parts.length != 3) return true;
+      
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final payloadMap = jsonDecode(decoded);
+      
+      final exp = payloadMap['exp'];
+      if (exp == null) return true;
+      
+      final expirationDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+      final now = DateTime.now();
+      
+      final isExpired = now.isAfter(expirationDate);
+      print('🔄 Refresh token expira: $expirationDate, Ahora: $now, Expirado: $isExpired');
+      
+      return isExpired;
+    } catch (e) {
+      print('❌ Error verificando expiración del refresh token: $e');
+      return true;
+    }
+  }
 }
