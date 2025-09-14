@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/phone_input.dart';
 import 'screens/home.dart';
+import 'screens/profile.dart';
 import 'providers/auth.dart' as auth_provider;
 import 'providers/phone_input.dart' as phone_input_provider;
 import 'providers/verification.dart' as verification_provider;
+import 'providers/profile.dart';
 
 void main() {
-  runApp(const PhoneVerificationApp());
+  runApp(const MatchDayApp());
 }
 
-class PhoneVerificationApp extends StatelessWidget {
-  const PhoneVerificationApp({Key? key}) : super(key: key);
+class MatchDayApp extends StatelessWidget {
+  const MatchDayApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -20,15 +22,21 @@ class PhoneVerificationApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => auth_provider.AuthProvider()),
         ChangeNotifierProvider(create: (_) => phone_input_provider.PhoneInputProvider()),
         ChangeNotifierProvider(create: (_) => verification_provider.VerificationProvider()),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
       ],
       child: MaterialApp(
-        title: 'Phone Verification',
+        title: 'MatchDay',
         theme: ThemeData(
           primarySwatch: Colors.blue,
           useMaterial3: true,
           fontFamily: 'SF Pro Display',
         ),
         home: const SplashScreen(),
+        routes: {
+          '/phone': (context) => const PhoneInputScreen(),
+          '/profile': (context) => const ProfileScreen(),
+          '/home': (context) => const HomeScreen(),
+        },
         debugShowCheckedModeBanner: false,
       ),
     );
@@ -55,6 +63,7 @@ class _SplashScreenState extends State<SplashScreen> {
     
     if (mounted) {
       final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
       
       // Esperar a que termine la inicialización del AuthProvider
       while (!authProvider.isInitialized) {
@@ -63,9 +72,19 @@ class _SplashScreenState extends State<SplashScreen> {
       }
       
       if (authProvider.isAuthenticated) {
+        // Verificar si tiene perfil completo
+        if (authProvider.token != null) {
+          await profileProvider.loadProfile(authProvider.token!);
+        }
+        
+        // Si tiene perfil completo, ir al home, sino al perfil
+        final hasProfile = profileProvider.profile.name.isNotEmpty;
+        
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(
+            builder: (context) => hasProfile ? const HomeScreen() : const ProfileScreen(),
+          ),
         );
       } else {
         Navigator.pushReplacement(
@@ -84,33 +103,50 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Logo/Icon
+            // Logo MatchDay
             Container(
-              width: 100,
-              height: 100,
+              width: 120,
+              height: 120,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(25),
+                borderRadius: BorderRadius.circular(30),
                 gradient: const LinearGradient(
-                  colors: [Colors.blue, Colors.purple],
+                  colors: [Color(0xFF4CAF50), Color(0xFF2196F3)], // Verde y azul como el logo
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
               child: const Icon(
-                Icons.phone_android,
+                Icons.sports_soccer,
                 color: Colors.white,
-                size: 50,
+                size: 60,
               ),
             ),
             const SizedBox(height: 24),
             
             // App name
             const Text(
-              'Phone Verification',
+              'MatchDay',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            
+            // Subtitle
+            const Text(
+              'Organiza tu fulbito semanal',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
               ),
             ),
             const SizedBox(height: 16),

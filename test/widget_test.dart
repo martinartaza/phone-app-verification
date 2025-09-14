@@ -8,7 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:phone_verification_app/main.dart';
+import 'package:matchday/main.dart';
 
 void main() {
   testWidgets('Phone verification app smoke test', (WidgetTester tester) async {

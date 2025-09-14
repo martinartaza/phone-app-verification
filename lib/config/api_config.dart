@@ -4,12 +4,15 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   // Configuración automática según la plataforma
   static String get baseUrl {
+    /*
     if (kIsWeb) {
       // Flutter Web - usar IP local
       return 'http://192.168.100.150:8000';
     } else if (Platform.isAndroid) {
-      // Android Emulator - usar IP especial que mapea a localhost del host
-      return 'http://10.0.2.2:8000';
+      // Detectar si es emulador o dispositivo físico
+      return kDebugMode 
+          ? 'http://10.0.2.2:8000'           // Android Emulator (debug)
+          : 'http://192.168.100.150:8000';   // Dispositivo físico (release APK)
     } else if (Platform.isIOS) {
       // iOS Simulator - usar localhost
       return 'http://localhost:8000';
@@ -17,8 +20,10 @@ class ApiConfig {
       // Desktop (macOS, Windows, Linux) - usar IP local
       return 'http://192.168.100.150:8000';
     }
+    */
+    return 'https://1e5fad975fde.ngrok-free.app';
   }
-  
+  //static const String baseUrl = 'http://192.168.100.150:8000';
   // Configuraciones manuales para override si es necesario:
   // static const String baseUrl = 'http://192.168.100.150:8000';  // IP local
   // static const String baseUrl = 'http://10.0.2.2:8000';         // Android Emulator

@@ -5,7 +5,7 @@ import '../models/auth_response.dart';
 import 'storage.dart' as storage_service;
 
 class AuthService {
-  static Future<bool> createUser(String phoneNumber) async {
+  static Future<Map<String, dynamic>> createUser(String phoneNumber) async {
     try {
       final uri = Uri.parse(ApiConfig.createUserUrl);
       final requestBody = jsonEncode({
@@ -21,9 +21,20 @@ class AuthService {
         body: requestBody,
       );
 
-      return response.statusCode == 200 || response.statusCode == 201;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'message': 'Código enviado exitosamente'};
+      } else {
+        // Intentar parsear el mensaje de error del servidor
+        try {
+          final errorData = jsonDecode(response.body);
+          final errorMessage = errorData['message'] ?? errorData['error'] ?? 'Error del servidor';
+          return {'success': false, 'message': errorMessage};
+        } catch (e) {
+          return {'success': false, 'message': 'Error del servidor (${response.statusCode})'};
+        }
+      }
     } catch (e) {
-      return false;
+      return {'success': false, 'message': 'Error de conexión: $e'};
     }
   }
   

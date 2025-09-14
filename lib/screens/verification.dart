@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth.dart' as auth_provider;
 import '../providers/verification.dart' as verification_provider;
-import 'home.dart';
 
 class VerificationScreen extends StatefulWidget {
   final String phoneNumber;
@@ -73,10 +72,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
     if (success && mounted) {
       _showMessage('✅ Verificación exitosa', isError: false);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+      Navigator.pushReplacementNamed(context, '/profile');
     } else if (mounted) {
       // Limpiar campos en caso de error
       for (var controller in _controllers) {

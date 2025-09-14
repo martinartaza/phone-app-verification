@@ -1,160 +1,39 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth.dart' as auth_provider;
-import 'phone_input.dart';
+import '../providers/profile.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
-    // Verificar y renovar tokens al cargar la pantalla
+    _tabController = TabController(length: 2, vsync: this);
+    
+    // Cargar perfil al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkTokensAndRefreshData();
+      final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      
+      if (authProvider.token != null) {
+        profileProvider.loadProfile(authProvider.token!);
+      }
     });
   }
 
-  Future<void> _checkTokensAndRefreshData() async {
-    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
-    
-    // SIEMPRE verificar con el servidor usando datos guardados
-    final serverResponse = await authProvider.verifyWithServer();
-    
-    if (!serverResponse && mounted) {
-      // El servidor rechazó los datos, ir al login
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('⚠️ Sesión expirada, por favor inicia sesión nuevamente'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const PhoneInputScreen()),
-        (route) => false,
-      );
-      return;
-    }
-    
-    // Refrescar datos del usuario
-    await authProvider.refreshUserData();
-  }
-
-  Future<void> _logout() async {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Cerrar Sesión'),
-          content: const Text('¿Estás seguro que deseas cerrar sesión?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
-                await authProvider.logout();
-                
-                if (mounted) {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (context) => const PhoneInputScreen()),
-                    (route) => false,
-                  );
-                }
-              },
-              child: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _showStoredData() async {
-    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
-    final allData = await authProvider.getStoredData();
-    
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Datos Almacenados'),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('📱 Teléfono: ${allData['phone_number'] ?? 'No guardado'}'),
-                  const SizedBox(height: 8),
-                  Text('🔢 Código: ${allData['verification_code'] ?? 'No guardado'}'),
-                  const SizedBox(height: 8),
-                  Text('🔐 Token: ${allData['access_token'] != null ? '${allData['access_token'].toString().substring(0, 20)}...' : 'No guardado'}'),
-                  const SizedBox(height: 8),
-                  Text('🔄 Refresh Token: ${allData['refresh_token'] != null ? '${allData['refresh_token'].toString().substring(0, 20)}...' : 'No guardado'}'),
-                  const SizedBox(height: 8),
-                  Text('✅ Logueado: ${allData['is_logged_in'] ?? false}'),
-                  const SizedBox(height: 8),
-                  const Text('💡 Refresh token válido por 10 días'),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cerrar'),
-              ),
-            ],
-          );
-        },
-      );
-    }
-  }
-
-  Future<void> _renewTokens() async {
-    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('🔄 Renovando tokens...')),
-    );
-    
-    final success = await authProvider.checkAndRenewTokens();
-    
-    if (mounted) {
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Tokens renovados exitosamente'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ Error renovando tokens'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        
-        // Si falló la renovación, ir al login
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const PhoneInputScreen()),
-          (route) => false,
-        );
-      }
-    }
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
@@ -162,224 +41,233 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Consumer<auth_provider.AuthProvider>(
-            builder: (context, authProvider, child) {
-              if (authProvider.isLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              return Column(
+        child: Column(
+          children: [
+            // Header similar a WhatsApp
+            _buildHeader(),
+            
+            // Tabs
+            _buildTabBar(),
+            
+            // Content
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
                 children: [
-                  const SizedBox(height: 60),
-                  
-                  // Success icon
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(25),
-                      gradient: const LinearGradient(
-                        colors: [Colors.green, Colors.blue],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.check_circle_outline,
-                      color: Colors.white,
-                      size: 50,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  
-                  // Welcome title
-                  const Text(
-                    '¡Bienvenido!',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // User info
-                  if (authProvider.userData != null)
-                    Text(
-                      authProvider.userData!.username,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.blue,
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  
-                  // Success message
-                  Text(
-                    'Tu número de teléfono ha sido verificado exitosamente',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 60),
-                  
-                  // Feature cards
-                  Expanded(
-                    child: ListView(
-                      children: [
-                        _buildFeatureCard(
-                          icon: Icons.security,
-                          title: 'Cuenta Verificada',
-                          description: 'Tu cuenta está completamente verificada y segura',
-                          color: Colors.green,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildFeatureCard(
-                          icon: Icons.phone,
-                          title: 'Teléfono: ${authProvider.phoneNumber ?? 'No disponible'}',
-                          description: 'Número de teléfono verificado',
-                          color: Colors.blue,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildFeatureCard(
-                          icon: Icons.token,
-                          title: 'Tokens Activos',
-                          description: 'Access token y refresh token guardados (10 días)',
-                          color: Colors.purple,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildFeatureCard(
-                          icon: Icons.storage,
-                          title: 'Ver Datos Guardados',
-                          description: 'Toca para ver todos los datos almacenados',
-                          color: Colors.orange,
-                          onTap: _showStoredData,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildFeatureCard(
-                          icon: Icons.refresh,
-                          title: 'Renovar Tokens',
-                          description: 'Toca para renovar tokens manualmente',
-                          color: Colors.teal,
-                          onTap: _renewTokens,
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  // Logout button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _logout,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Colors.red, Colors.orange],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.logout, color: Colors.white),
-                              SizedBox(width: 8),
-                              Text(
-                                'Cerrar Sesión',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
+                  _buildFulbitosTab(),
+                  _buildJugadoresTab(),
                 ],
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildFeatureCard({
-    required IconData icon,
-    required String title,
-    required String description,
-    required Color color,
-    VoidCallback? onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey[200]!),
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF059669), Color(0xFF10B981)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: color.withAlpha(25),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 24,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Lupa
+          const Icon(
+            Icons.search,
+            color: Colors.white,
+            size: 24,
+          ),
+          
+          const SizedBox(width: 16),
+          
+          // Título
+          const Expanded(
+            child: Text(
+              'MatchDay',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
+          ),
+          
+          // Foto de perfil
+          Consumer<ProfileProvider>(
+            builder: (context, profileProvider, child) {
+              return GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/profile');
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                  child: ClipOval(
+                    child: profileProvider.profile.photoPath != null
+                        ? Image.file(
+                            File(profileProvider.profile.photoPath!),
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            color: Colors.white.withOpacity(0.2),
+                            child: const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
                   ),
-                ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      color: const Color(0xFF059669),
+      child: TabBar(
+        controller: _tabController,
+        indicatorColor: Colors.white,
+        indicatorWeight: 3,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white.withOpacity(0.7),
+        labelStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+        tabs: const [
+          Tab(text: 'Fulbitos'),
+          Tab(text: 'Jugadores'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFulbitosTab() {
+    return Container(
+      color: Colors.grey.shade50,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.sports_soccer,
+              size: 64,
+              color: Color(0xFF6B7280),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No hay fulbitos programados',
+              style: TextStyle(
+                fontSize: 18,
+                color: Color(0xFF6B7280),
+                fontWeight: FontWeight.w500,
               ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Los fulbitos aparecerán aquí cuando se programen',
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF9CA3AF),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            _buildAddButton(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJugadoresTab() {
+    return Container(
+      color: Colors.grey.shade50,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.group,
+              size: 64,
+              color: Color(0xFF6B7280),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No hay jugadores en tu red',
+              style: TextStyle(
+                fontSize: 18,
+                color: Color(0xFF6B7280),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Los jugadores de tu grupo aparecerán aquí',
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF9CA3AF),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            _buildAddButton(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddButton() {
+    return GestureDetector(
+      onTap: () {
+        // TODO: Implementar funcionalidad del botón +
+        print('🔘 Botón + presionado');
+      },
+      child: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF059669), Color(0xFF10B981)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF059669).withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
+        ),
+        child: const Icon(
+          Icons.add,
+          color: Colors.white,
+          size: 32,
         ),
       ),
     );

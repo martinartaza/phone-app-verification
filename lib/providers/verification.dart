@@ -42,12 +42,14 @@ class VerificationProvider extends ChangeNotifier {
     if (!_canResend) return false;
     
     try {
-      final success = await auth_service.AuthService.createUser(phoneNumber);
-      if (success) {
+      final result = await auth_service.AuthService.createUser(phoneNumber);
+      if (result['success']) {
         startResendTimer();
         return true;
+      } else {
+        _setError(result['message'] ?? 'Error reenviando código');
+        return false;
       }
-      return false;
     } catch (e) {
       _setError('Error reenviando código: $e');
       return false;

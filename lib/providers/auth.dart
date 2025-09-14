@@ -19,6 +19,7 @@ class AuthProvider extends ChangeNotifier {
   String? get phoneNumber => _phoneNumber;
   UserData? get userData => _userData;
   String? get errorMessage => _errorMessage;
+  String? get token => _userData?.token;
 
   // Constructor
   AuthProvider() {
@@ -64,13 +65,13 @@ class AuthProvider extends ChangeNotifier {
     _clearError();
     
     try {
-      final success = await auth_service.AuthService.createUser(phoneNumber);
-      if (success) {
+      final result = await auth_service.AuthService.createUser(phoneNumber);
+      if (result['success']) {
         _phoneNumber = phoneNumber;
         notifyListeners();
         return true;
       } else {
-        _setError('Error al enviar el código');
+        _setError(result['message'] ?? 'Error al enviar el código');
         return false;
       }
     } catch (e) {

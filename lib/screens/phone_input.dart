@@ -12,11 +12,18 @@ class PhoneInputScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              const Spacer(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height - 
+                         MediaQuery.of(context).padding.top - 
+                         MediaQuery.of(context).padding.bottom - 48,
+            ),
+            child: IntrinsicHeight(
+              child: Column(
+                children: [
+                  const Spacer(),
               
               // Icon
               Container(
@@ -325,7 +332,9 @@ class PhoneInputScreen extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 32),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
