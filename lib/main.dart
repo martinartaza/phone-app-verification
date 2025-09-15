@@ -160,11 +160,11 @@ class _SplashScreenState extends State<SplashScreen> {
               builder: (context, authProvider, child) {
                 String statusText = 'Verificando datos locales...';
                 if (authProvider.isLoading) {
-                  statusText = 'Cargando datos guardados...';
+                  statusText = 'Verificando con el servidor...';
                 } else if (authProvider.isInitialized) {
                   statusText = authProvider.isAuthenticated 
-                      ? 'Datos encontrados, ir al Home ✅' 
-                      : 'Sin datos, ir al login...';
+                      ? 'Sesión válida, ir al Home ✅' 
+                      : 'Sin sesión válida, ir al login...';
                 }
                 
                 return Text(

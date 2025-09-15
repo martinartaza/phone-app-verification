@@ -331,7 +331,32 @@ class PhoneInputScreen extends StatelessWidget {
                   );
                 },
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+              
+              // Debug button (temporal)
+              Consumer<auth_provider.AuthProvider>(
+                builder: (context, authProvider, child) {
+                  return TextButton(
+                    onPressed: () async {
+                      await authProvider.debugPrintStoredData();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Datos impresos en consola'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Debug: Ver datos guardados',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
                 ],
               ),
             ),

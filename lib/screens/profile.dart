@@ -145,8 +145,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   
                   const SizedBox(height: 16),
                   
-                  // Checkbox Buen Arquero
-                  _buildGoalkeeperCheckbox(profileProvider),
+                  // Checkboxes de posiciones
+                  _buildPositionCheckboxes(profileProvider),
                   
                   const SizedBox(height: 24),
                   
@@ -269,6 +269,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       {'key': 'tiro', 'label': 'Tiro a arco', 'icon': Icons.sports_soccer},
       {'key': 'gambeta', 'label': 'Gambeta', 'icon': Icons.shuffle},
       {'key': 'pases', 'label': 'Pases', 'icon': Icons.swap_horiz},
+      {'key': 'defensa', 'label': 'Defensa', 'icon': Icons.shield},
     ];
 
     return Column(
@@ -334,22 +335,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildGoalkeeperCheckbox(ProfileProvider profileProvider) {
-    return Row(
+  Widget _buildPositionCheckboxes(ProfileProvider profileProvider) {
+    return Column(
       children: [
-        Checkbox(
-          value: profileProvider.profile.isGoalkeeper,
-          onChanged: (value) {
-            profileProvider.updateIsGoalkeeper(value ?? false);
-          },
-          activeColor: const Color(0xFF8B5CF6),
+        // Buen arquero
+        Row(
+          children: [
+            Checkbox(
+              value: profileProvider.profile.isGoalkeeper,
+              onChanged: (value) {
+                profileProvider.updateIsGoalkeeper(value ?? false);
+              },
+              activeColor: const Color(0xFF8B5CF6),
+            ),
+            const Text(
+              'Buen arquero',
+              style: TextStyle(
+                fontSize: 16,
+                color: Color(0xFF374151),
+              ),
+            ),
+          ],
         ),
-        const Text(
-          'Buen arquero',
-          style: TextStyle(
-            fontSize: 16,
-            color: Color(0xFF374151),
-          ),
+        // Es delantero
+        Row(
+          children: [
+            Checkbox(
+              value: profileProvider.profile.isStriker,
+              onChanged: (value) {
+                profileProvider.updateIsStriker(value ?? false);
+              },
+              activeColor: const Color(0xFF8B5CF6),
+            ),
+            const Text(
+              'Es delantero',
+              style: TextStyle(
+                fontSize: 16,
+                color: Color(0xFF374151),
+              ),
+            ),
+          ],
+        ),
+        // Es mediocampista
+        Row(
+          children: [
+            Checkbox(
+              value: profileProvider.profile.isMidfielder,
+              onChanged: (value) {
+                profileProvider.updateIsMidfielder(value ?? false);
+              },
+              activeColor: const Color(0xFF8B5CF6),
+            ),
+            const Text(
+              'Es mediocampista',
+              style: TextStyle(
+                fontSize: 16,
+                color: Color(0xFF374151),
+              ),
+            ),
+          ],
+        ),
+        // Es defensor
+        Row(
+          children: [
+            Checkbox(
+              value: profileProvider.profile.isDefender,
+              onChanged: (value) {
+                profileProvider.updateIsDefender(value ?? false);
+              },
+              activeColor: const Color(0xFF8B5CF6),
+            ),
+            const Text(
+              'Es defensor',
+              style: TextStyle(
+                fontSize: 16,
+                color: Color(0xFF374151),
+              ),
+            ),
+          ],
         ),
       ],
     );

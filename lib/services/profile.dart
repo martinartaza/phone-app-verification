@@ -32,6 +32,7 @@ class ProfileService {
       //       'tiro': profile.skills['tiro'],
       //       'gambeta': profile.skills['gambeta'],
       //       'pases': profile.skills['pases'],
+      //       'defensa': profile.skills['defensa'],
       //     },
       //     'is_goalkeeper': profile.isGoalkeeper,
       //   }),

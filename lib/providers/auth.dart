@@ -31,32 +31,79 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     
     try {
-      // Verificar si hay datos guardados (teléfono y código)
+      print('🚀 Iniciando verificación de autenticación...');
+      
+      // Verificar si hay datos guardados (phone, code, token, refresh token)
       final phoneNumber = await storage_service.StorageService.getPhoneNumber();
       final verificationCode = await storage_service.StorageService.getVerificationCode();
       final isLoggedIn = await storage_service.StorageService.isLoggedIn();
+      final refreshToken = await storage_service.StorageService.getRefreshToken();
+      final accessToken = await storage_service.StorageService.getAccessToken();
       
       print('🔍 Verificando datos locales:');
       print('  - phoneNumber: $phoneNumber');
       print('  - verificationCode: $verificationCode');
       print('  - isLoggedIn: $isLoggedIn');
+      print('  - refreshToken: ${refreshToken != null ? "Presente (${refreshToken.length} chars)" : "Ausente"}');
+      print('  - accessToken: ${accessToken != null ? "Presente (${accessToken.length} chars)" : "Ausente"}');
       
-      // Si hay datos guardados, considerar como autenticado para ir al Home
-      if (phoneNumber != null && verificationCode != null && isLoggedIn) {
+      // Si NO tiene datos guardados -> Va a phone_input
+      if (phoneNumber == null || verificationCode == null || !isLoggedIn || refreshToken == null) {
+        print('❌ Datos locales incompletos o ausentes -> Ir a phone_input');
+        _isAuthenticated = false;
+        _isInitialized = true;
+        return;
+      }
+      
+      // Si YA tiene datos guardados -> Intentar refresh token
+      print('📡 Datos locales encontrados, intentando refresh token...');
+      
+      // Paso 1: Intentar refresh-token
+      final refreshSuccess = await auth_service.AuthService.refreshAccessToken();
+      
+      if (refreshSuccess) {
+        // Caso 1: refresh-token responde success -> va al home
+        print('✅ Refresh token exitoso -> Ir al home');
         _isAuthenticated = true;
         _phoneNumber = phoneNumber;
         _userData = await _getUserDataFromStorage();
       } else {
-        _isAuthenticated = false;
+        // Caso 2: refresh-token responde error -> intentar verify-user con datos guardados
+        print('❌ Refresh token falló -> Intentando verify-user con datos guardados');
+        
+        final reVerifyResponse = await auth_service.AuthService.reVerifyWithStoredData();
+        
+        if (reVerifyResponse != null && reVerifyResponse.isSuccess) {
+          // verify-user responde ok -> va al home
+          print('✅ Re-verificación exitosa -> Ir al home');
+          _isAuthenticated = true;
+          _phoneNumber = phoneNumber;
+          _userData = reVerifyResponse.data;
+        } else {
+          // verify-user responde error -> va a phone_input
+          print('❌ Re-verificación falló -> Limpiar datos y ir a phone_input');
+          await _clearLocalDataAndSetUnauthenticated();
+        }
       }
       
       _isInitialized = true;
+      print('🏁 Inicialización completada. Autenticado: $_isAuthenticated');
     } catch (e) {
-      _setError('Error inicializando autenticación: $e');
-      _isInitialized = true; // Marcar como inicializado aunque haya error
+      print('❌ Error inicializando autenticación: $e');
+      await _clearLocalDataAndSetUnauthenticated();
+      _isInitialized = true;
     } finally {
       _setLoading(false);
     }
+  }
+
+  /// Limpiar datos locales y marcar como no autenticado
+  Future<void> _clearLocalDataAndSetUnauthenticated() async {
+    await storage_service.StorageService.clearAllData();
+    _isAuthenticated = false;
+    _phoneNumber = null;
+    _userData = null;
+    _clearError();
   }
 
   /// Enviar código de verificación
@@ -152,6 +199,30 @@ class AuthProvider extends ChangeNotifier {
     return await storage_service.StorageService.getAllStoredData();
   }
 
+  /// Método de debug para imprimir todos los datos guardados
+  Future<void> debugPrintStoredData() async {
+    final data = await getStoredData();
+    print('🐛 DEBUG - Datos guardados localmente:');
+    data.forEach((key, value) {
+      if (key.contains('token') && value != null) {
+        print('  $key: ${value.toString().substring(0, 20)}...');
+      } else {
+        print('  $key: $value');
+      }
+    });
+  }
+
+  /// Método simple para verificar si hay datos básicos (sin validaciones complejas)
+  Future<bool> hasBasicStoredData() async {
+    final phoneNumber = await storage_service.StorageService.getPhoneNumber();
+    final verificationCode = await storage_service.StorageService.getVerificationCode();
+    final isLoggedIn = await storage_service.StorageService.isLoggedIn();
+    
+    final hasData = phoneNumber != null && verificationCode != null && isLoggedIn;
+    print('🔍 Datos básicos presentes: $hasData');
+    return hasData;
+  }
+
   /// Verificar con el servidor usando datos guardados
   Future<bool> verifyWithServer() async {
     if (!_isAuthenticated) return false;
@@ -159,17 +230,28 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     
     try {
-      final reVerifyResponse = await auth_service.AuthService.reVerifyWithStoredData();
+      // Primero intentar refrescar el token
+      final refreshSuccess = await auth_service.AuthService.refreshAccessToken();
       
-      if (reVerifyResponse != null && reVerifyResponse.isSuccess) {
-        // El servidor confirmó que los datos son válidos
-        _userData = reVerifyResponse.data;
+      if (refreshSuccess) {
+        // Si el refresh fue exitoso, actualizar datos del usuario
+        _userData = await _getUserDataFromStorage();
         notifyListeners();
         return true;
       } else {
-        // El servidor rechazó los datos (pueden haber expirado)
-        await logout();
-        return false;
+        // Si el refresh falló, intentar re-verificar con datos guardados
+        final reVerifyResponse = await auth_service.AuthService.reVerifyWithStoredData();
+        
+        if (reVerifyResponse != null && reVerifyResponse.isSuccess) {
+          // El servidor confirmó que los datos son válidos
+          _userData = reVerifyResponse.data;
+          notifyListeners();
+          return true;
+        } else {
+          // El servidor rechazó los datos (pueden haber expirado)
+          await logout();
+          return false;
+        }
       }
     } catch (e) {
       _setError('Error verificando con servidor: $e');

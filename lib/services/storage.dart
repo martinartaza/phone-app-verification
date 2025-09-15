@@ -181,11 +181,18 @@ class StorageService {
   // Verificar si el refresh token ha expirado (10 días)
   static Future<bool> isRefreshTokenExpired() async {
     final refreshToken = await getRefreshToken();
-    if (refreshToken == null) return true;
+    if (refreshToken == null) {
+      print('🔄 No hay refresh token, considerando expirado');
+      return true;
+    }
     
     try {
+      print('🔄 Verificando expiración del refresh token...');
       final parts = refreshToken.split('.');
-      if (parts.length != 3) return true;
+      if (parts.length != 3) {
+        print('❌ Refresh token no tiene formato JWT válido');
+        return true;
+      }
       
       final payload = parts[1];
       final normalized = base64Url.normalize(payload);
@@ -193,7 +200,10 @@ class StorageService {
       final payloadMap = jsonDecode(decoded);
       
       final exp = payloadMap['exp'];
-      if (exp == null) return true;
+      if (exp == null) {
+        print('❌ Refresh token no tiene campo exp');
+        return true;
+      }
       
       final expirationDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
       final now = DateTime.now();
@@ -204,7 +214,8 @@ class StorageService {
       return isExpired;
     } catch (e) {
       print('❌ Error verificando expiración del refresh token: $e');
-      return true;
+      // En caso de error, asumir que no está expirado para intentar usarlo
+      return false;
     }
   }
 }

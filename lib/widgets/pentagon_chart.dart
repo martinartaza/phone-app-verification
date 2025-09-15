@@ -15,17 +15,17 @@ class PentagonChart extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       size: Size(size, size),
-      painter: PentagonPainter(skills),
+      painter: HexagonPainter(skills),
     );
   }
 }
 
-class PentagonPainter extends CustomPainter {
+class HexagonPainter extends CustomPainter {
   final Map<String, double> skills;
-  final List<String> skillOrder = ['velocidad', 'resistencia', 'tiro', 'gambeta', 'pases'];
-  final List<String> skillLabels = ['Velocidad', 'Resistencia', 'Tiro a arco', 'Gambeta', 'Pases'];
+  final List<String> skillOrder = ['velocidad', 'resistencia', 'tiro', 'gambeta', 'pases', 'defensa'];
+  final List<String> skillLabels = ['Velocidad', 'Resistencia', 'Tiro a arco', 'Gambeta', 'Pases', 'Defensa'];
 
-  PentagonPainter(this.skills);
+  HexagonPainter(this.skills);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -36,32 +36,32 @@ class PentagonPainter extends CustomPainter {
     final primaryColor = const Color(0xFF6366F1); // Indigo
     final backgroundColor = Colors.grey.shade200;
 
-    // Dibujar líneas de fondo (pentágono base)
-    _drawBackgroundPentagon(canvas, center, radius, backgroundColor);
+    // Dibujar líneas de fondo (hexágono base)
+    _drawBackgroundHexagon(canvas, center, radius, backgroundColor);
 
-    // Dibujar pentágono de habilidades
-    _drawSkillsPentagon(canvas, center, radius, primaryColor);
+    // Dibujar hexágono de habilidades
+    _drawSkillsHexagon(canvas, center, radius, primaryColor);
 
     // Dibujar labels
     _drawLabels(canvas, center, radius * 1.2, Colors.grey.shade700);
   }
 
-  void _drawBackgroundPentagon(Canvas canvas, Offset center, double radius, Color color) {
+  void _drawBackgroundHexagon(Canvas canvas, Offset center, double radius, Color color) {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
-    // Dibujar 5 niveles del pentágono (20%, 40%, 60%, 80%, 100%)
+    // Dibujar 5 niveles del hexágono (20%, 40%, 60%, 80%, 100%)
     for (int level = 1; level <= 5; level++) {
       final levelRadius = radius * (level / 5);
-      final path = _createPentagonPath(center, levelRadius);
+      final path = _createHexagonPath(center, levelRadius);
       canvas.drawPath(path, paint);
     }
 
     // Dibujar líneas desde el centro a cada vértice
-    for (int i = 0; i < 5; i++) {
-      final angle = (i * 2 * pi / 5) - (pi / 2); // Empezar desde arriba
+    for (int i = 0; i < 6; i++) {
+      final angle = (i * 2 * pi / 6) - (pi / 2); // Empezar desde arriba
       final endPoint = Offset(
         center.dx + radius * cos(angle),
         center.dy + radius * sin(angle),
@@ -70,7 +70,7 @@ class PentagonPainter extends CustomPainter {
     }
   }
 
-  void _drawSkillsPentagon(Canvas canvas, Offset center, double radius, Color color) {
+  void _drawSkillsHexagon(Canvas canvas, Offset center, double radius, Color color) {
     final paint = Paint()
       ..color = color.withOpacity(0.3)
       ..style = PaintingStyle.fill;
@@ -83,12 +83,12 @@ class PentagonPainter extends CustomPainter {
     final path = Path();
     bool isFirst = true;
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 6; i++) {
       final skillName = skillOrder[i];
       final skillValue = skills[skillName] ?? 0;
       final normalizedValue = skillValue / 100; // Normalizar a 0-1
       
-      final angle = (i * 2 * pi / 5) - (pi / 2); // Empezar desde arriba
+      final angle = (i * 2 * pi / 6) - (pi / 2); // Empezar desde arriba
       final skillRadius = radius * normalizedValue;
       
       final point = Offset(
@@ -117,12 +117,12 @@ class PentagonPainter extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.fill;
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 6; i++) {
       final skillName = skillOrder[i];
       final skillValue = skills[skillName] ?? 0;
       final normalizedValue = skillValue / 100;
       
-      final angle = (i * 2 * pi / 5) - (pi / 2);
+      final angle = (i * 2 * pi / 6) - (pi / 2);
       final skillRadius = radius * normalizedValue;
       
       final point = Offset(
@@ -135,8 +135,8 @@ class PentagonPainter extends CustomPainter {
   }
 
   void _drawLabels(Canvas canvas, Offset center, double radius, Color textColor) {
-    for (int i = 0; i < 5; i++) {
-      final angle = (i * 2 * pi / 5) - (pi / 2);
+    for (int i = 0; i < 6; i++) {
+      final angle = (i * 2 * pi / 6) - (pi / 2);
       final labelPosition = Offset(
         center.dx + radius * cos(angle),
         center.dy + radius * sin(angle),
@@ -166,11 +166,11 @@ class PentagonPainter extends CustomPainter {
     }
   }
 
-  Path _createPentagonPath(Offset center, double radius) {
+  Path _createHexagonPath(Offset center, double radius) {
     final path = Path();
     
-    for (int i = 0; i < 5; i++) {
-      final angle = (i * 2 * pi / 5) - (pi / 2);
+    for (int i = 0; i < 6; i++) {
+      final angle = (i * 2 * pi / 6) - (pi / 2);
       final point = Offset(
         center.dx + radius * cos(angle),
         center.dy + radius * sin(angle),

@@ -51,6 +51,21 @@ class ProfileProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void updateIsStriker(bool isStriker) {
+    _profile = _profile.copyWith(isStriker: isStriker);
+    notifyListeners();
+  }
+
+  void updateIsMidfielder(bool isMidfielder) {
+    _profile = _profile.copyWith(isMidfielder: isMidfielder);
+    notifyListeners();
+  }
+
+  void updateIsDefender(bool isDefender) {
+    _profile = _profile.copyWith(isDefender: isDefender);
+    notifyListeners();
+  }
+
   Future<void> pickImage(ImageSource source) async {
     try {
       final XFile? image = await _imagePicker.pickImage(
@@ -80,6 +95,9 @@ class ProfileProvider with ChangeNotifier {
     print('  - profile.age: ${_profile.age}');
     print('  - profile.skills: ${_profile.skills}');
     print('  - profile.isGoalkeeper: ${_profile.isGoalkeeper}');
+    print('  - profile.isStriker: ${_profile.isStriker}');
+    print('  - profile.isMidfielder: ${_profile.isMidfielder}');
+    print('  - profile.isDefender: ${_profile.isDefender}');
 
     _setLoading(true);
     _clearError();

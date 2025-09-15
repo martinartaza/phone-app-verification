@@ -17,6 +17,7 @@ class AuthService {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
         },
         body: requestBody,
       );
@@ -50,6 +51,7 @@ class AuthService {
         uri,
         headers: {
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
         },
         body: requestBody,
       );
@@ -58,20 +60,40 @@ class AuthService {
         final authResponse = AuthResponse.fromJson(jsonDecode(response.body));
         
         if (authResponse.isSuccess && authResponse.data != null) {
+          print('💾 Guardando datos de autenticación...');
+          
           // Guardar número de teléfono
           await storage_service.StorageService.savePhoneNumber(phoneNumber);
+          print('  ✅ Teléfono guardado: $phoneNumber');
           
           // Guardar código de verificación
           await storage_service.StorageService.saveVerificationCode(code);
+          print('  ✅ Código guardado: $code');
           
           // Guardar tokens (el API puede devolver nuevos tokens en cada verificación)
           await storage_service.StorageService.saveAuthTokens(
             accessToken: authResponse.data!.token,
             refreshToken: authResponse.data!.refreshToken,
           );
+          print('  ✅ Tokens guardados');
+          print('    - Access token: ${authResponse.data!.token.substring(0, 20)}...');
+          print('    - Refresh token: ${authResponse.data!.refreshToken.substring(0, 20)}...');
           
           // Guardar datos del usuario
           await storage_service.StorageService.saveUserData(authResponse.data!.toJson());
+          print('  ✅ Datos de usuario guardados');
+          
+          // Verificar que se guardaron correctamente
+          final savedPhone = await storage_service.StorageService.getPhoneNumber();
+          final savedCode = await storage_service.StorageService.getVerificationCode();
+          final savedLoggedIn = await storage_service.StorageService.isLoggedIn();
+          final savedRefresh = await storage_service.StorageService.getRefreshToken();
+          
+          print('🔍 Verificación post-guardado:');
+          print('  - Teléfono: $savedPhone');
+          print('  - Código: $savedCode');
+          print('  - LoggedIn: $savedLoggedIn');
+          print('  - Refresh token: ${savedRefresh != null ? "Presente" : "Ausente"}');
           
           print('✅ Datos guardados exitosamente en el almacenamiento local');
           print('🔄 Refresh token válido por 10 días');
@@ -91,9 +113,11 @@ class AuthService {
     try {
       final refreshToken = await storage_service.StorageService.getRefreshToken();
       if (refreshToken == null) {
+        print('❌ No hay refresh token disponible');
         return false;
       }
 
+      print('🔄 Intentando refrescar access token...');
       final uri = Uri.parse(ApiConfig.refreshTokenUrl);
       final requestBody = jsonEncode({
         'refresh_token': refreshToken,
@@ -103,26 +127,68 @@ class AuthService {
         uri,
         headers: {
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
         },
         body: requestBody,
       );
       
+      print('📡 Respuesta del servidor: ${response.statusCode}');
+      print('📡 Cuerpo de respuesta: ${response.body}');
+      
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         
-        if (responseData['access_token'] != null) {
-          // Actualizar solo el access token
-          await storage_service.StorageService.saveAuthTokens(
-            accessToken: responseData['access_token'],
-            refreshToken: refreshToken, // Mantener el mismo refresh token
-          );
+        // El servidor devuelve la estructura: {status, message, data: {token, refresh_token}}
+        if (responseData['status'] == 'success' && responseData['data'] != null) {
+          final data = responseData['data'];
+          final newAccessToken = data['token'];
+          final newRefreshToken = data['refresh_token'];
           
-          return true;
+          if (newAccessToken != null) {
+            // Actualizar ambos tokens (el servidor puede devolver nuevos)
+            await storage_service.StorageService.saveAuthTokens(
+              accessToken: newAccessToken,
+              refreshToken: newRefreshToken ?? refreshToken, // Usar el nuevo o mantener el actual
+            );
+            
+            // También actualizar los datos del usuario si vienen en la respuesta
+            if (data['id'] != null) {
+              final userData = UserData(
+                id: data['id'],
+                username: data['username'] ?? '',
+                isActive: data['is_active'] ?? true,
+                profile: UserProfile(
+                  phoneNumber: data['profile']?['phone_number'] ?? '',
+                  isVerified: data['profile']?['is_verified'] ?? true,
+                ),
+                token: newAccessToken,
+                refreshToken: newRefreshToken ?? refreshToken,
+              );
+              
+              await storage_service.StorageService.saveUserData(userData.toJson());
+              print('✅ Datos de usuario actualizados');
+            }
+            
+            print('✅ Access token refrescado exitosamente');
+            return true;
+          } else {
+            print('❌ Respuesta sin token en data: $data');
+            return false;
+          }
+        } else {
+          print('❌ Respuesta con estructura incorrecta: $responseData');
+          return false;
         }
+      } else if (response.statusCode == 401) {
+        print('❌ Refresh token inválido o expirado (401)');
+        return false;
+      } else {
+        print('❌ Error del servidor al refrescar token: ${response.statusCode}');
+        print('   Respuesta: ${response.body}');
+        return false;
       }
-      
-      return false;
     } catch (e) {
+      print('❌ Error de conexión al refrescar token: $e');
       return false;
     }
   }
