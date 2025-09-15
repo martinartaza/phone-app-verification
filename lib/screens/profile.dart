@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../providers/profile.dart';
 import '../providers/auth.dart';
-import '../widgets/pentagon_chart.dart';
+import '../widgets/dual_hexagon_chart.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -16,6 +16,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _nameController = TextEditingController();
   int _selectedAge = 30;
+  VoidCallback? _providerListener;
 
   @override
   void initState() {
@@ -37,32 +38,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
       print('  - profile.name: ${profileProvider.profile.name}');
       print('  - profile.age: ${profileProvider.profile.age}');
       print('  - _selectedAge: $_selectedAge');
+
+      // Suscribirse a cambios del provider para reflejar carga async del perfil
+      _providerListener = () {
+        final loadedName = profileProvider.profile.name;
+        if (_nameController.text != loadedName) {
+          _nameController.text = loadedName;
+        }
+
+        final loadedAge = profileProvider.profile.age;
+        if (_selectedAge != loadedAge && mounted) {
+          setState(() {
+            _selectedAge = loadedAge;
+          });
+        }
+      };
+      profileProvider.addListener(_providerListener!);
     });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Actualizar los campos cuando el perfil cambie (ej: después de cargar del servidor)
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    
-    if (_selectedAge != profileProvider.profile.age) {
-      print('🔄 ProfileScreen didChangeDependencies:');
-      print('  - _selectedAge: $_selectedAge');
-      print('  - profile.age: ${profileProvider.profile.age}');
-      setState(() {
-        _selectedAge = profileProvider.profile.age;
-      });
-    }
-    
-    // Actualizar el nombre si cambió
-    if (_nameController.text != profileProvider.profile.name) {
-      _nameController.text = profileProvider.profile.name;
-    }
   }
 
   @override
   void dispose() {
+    // Remover listener para evitar fugas de memoria
+    try {
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      if (_providerListener != null) {
+        profileProvider.removeListener(_providerListener!);
+      }
+    } catch (_) {}
     _nameController.dispose();
     super.dispose();
   }
@@ -145,9 +153,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   
                   const SizedBox(height: 20),
                   
-                  // Pentágono
-                  PentagonChart(
-                    skills: profileProvider.profile.skills,
+                  // Hexágonos duales
+                  DualHexagonChart(
+                    selfPerceptionSkills: profileProvider.profile.skills,
+                    averageOpinionSkills: profileProvider.profile.averageSkills,
+                    numberOfOpinions: profileProvider.profile.numberOfOpinions,
                     size: 200,
                   ),
                   
@@ -277,7 +287,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
         errorText: !profileProvider.isNameValid && _nameController.text.isNotEmpty
-            ? 'Nombre de 4 a 20 caracteres'
+            ? 'Nombre de 4 a 30 caracteres'
             : null,
       ),
     );

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/profile.dart';
@@ -15,9 +16,22 @@ class ProfileProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  /// Provee una ImageProvider priorizando foto local y luego la URL del servidor.
+  /// Úsese en la UI para mantener el widget libre de lógica.
+  ImageProvider<Object> get profileImageProvider {
+    if (_profile.photoPath != null) {
+      return FileImage(File(_profile.photoPath!));
+    }
+    if (_profile.photoUrl != null && _profile.photoUrl!.isNotEmpty) {
+      return NetworkImage(_profile.photoUrl!);
+    }
+    // Fallback a un asset por defecto
+    return const AssetImage('assets/icons/logo.png');
+  }
+
   bool get isNameValid {
     final name = _profile.name.trim();
-    return name.length >= 4 && name.length <= 20 && !name.contains(' ');
+    return name.length >= 4 && name.length <= 30;
   }
 
   bool get canSaveProfile {
@@ -86,7 +100,7 @@ class ProfileProvider with ChangeNotifier {
 
   Future<bool> saveProfile(String token) async {
     if (!canSaveProfile) {
-      _setError('Llenar nombre de 4 a 20 caracteres (no puede ser espacio)');
+      _setError('El nombre debe tener entre 4 y 30 caracteres');
       return false;
     }
 

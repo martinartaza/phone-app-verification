@@ -120,19 +120,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     border: Border.all(color: Colors.white, width: 2),
                   ),
                   child: ClipOval(
-                    child: profileProvider.profile.photoPath != null
-                        ? Image.file(
-                            File(profileProvider.profile.photoPath!),
-                            fit: BoxFit.cover,
-                          )
-                        : Container(
-                            color: Colors.white.withOpacity(0.2),
-                            child: const Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 24,
-                            ),
+                    child: Image(
+                      image: profileProvider.profileImageProvider,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.white.withOpacity(0.2),
+                          child: const Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 24,
                           ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               );

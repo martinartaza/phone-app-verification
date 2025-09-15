@@ -31,7 +31,7 @@ class ProfileService {
         request.headers['Authorization'] = 'Bearer $token';
         
         // Agregar campos del perfil
-        request.fields['name'] = profile.name;
+        request.fields['firstname'] = profile.name;
         request.fields['age'] = profile.age.toString();
         request.fields['is_goalkeeper'] = profile.isGoalkeeper.toString();
         request.fields['is_forward'] = profile.isStriker.toString();
@@ -55,7 +55,7 @@ class ProfileService {
       } else {
         // Si no hay foto, usar JSON
         final body = {
-          'name': profile.name,
+          'firstname': profile.name,
           'age': profile.age,
           'is_goalkeeper': profile.isGoalkeeper,
           'is_forward': profile.isStriker,
@@ -134,6 +134,17 @@ class ProfileService {
             'defensa': (selfPerception['defending'] ?? 50).toDouble(),
           };
           
+          // Mapear average_opinion de inglés a español para uso interno
+          final averageOpinion = data['average_opinion'] as Map<String, dynamic>? ?? {};
+          final mappedAverageSkills = <String, double>{
+            'velocidad': (averageOpinion['speed'] ?? 0).toDouble(),
+            'resistencia': (averageOpinion['stamina'] ?? 0).toDouble(),
+            'tiro': (averageOpinion['shooting'] ?? 0).toDouble(),
+            'gambeta': (averageOpinion['dribbling'] ?? 0).toDouble(),
+            'pases': (averageOpinion['passing'] ?? 0).toDouble(),
+            'defensa': (averageOpinion['defending'] ?? 0).toDouble(),
+          };
+          
           // Construir URL completa de la foto si existe
           String? fullPhotoUrl;
           if (data['photo_url'] != null && data['photo_url'].toString().isNotEmpty) {
@@ -144,15 +155,18 @@ class ProfileService {
           }
           
           final profile = UserProfile(
-            name: data['name'] ?? '',
+            // El backend devuelve first_name; usar fallback a firstname por compatibilidad
+            name: data['first_name'] ?? data['firstname'] ?? '',
             age: data['age'] ?? 30,
             photoUrl: fullPhotoUrl,
             skills: mappedSkills,
+            averageSkills: mappedAverageSkills,
             isGoalkeeper: data['is_goalkeeper'] ?? false,
             isStriker: data['is_forward'] ?? false,
             isMidfielder: data['is_midfielder'] ?? false,
             isDefender: data['is_defender'] ?? false,
             profileCompleted: true,
+            numberOfOpinions: data['number_of_opinions'] ?? 0,
           );
           
           print('✅ Profile loaded successfully from server');

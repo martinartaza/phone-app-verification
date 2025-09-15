@@ -10,6 +10,7 @@ class UserProfile {
   final bool isMidfielder;
   final bool isDefender;
   final bool profileCompleted;
+  final int numberOfOpinions;
 
   UserProfile({
     this.name = '',
@@ -23,6 +24,7 @@ class UserProfile {
     this.isMidfielder = false,
     this.isDefender = false,
     this.profileCompleted = false,
+    this.numberOfOpinions = 0,
   }) : skills = skills ?? {
           'velocidad': 50.0,
           'resistencia': 50.0,
@@ -52,6 +54,7 @@ class UserProfile {
     bool? isMidfielder,
     bool? isDefender,
     bool? profileCompleted,
+    int? numberOfOpinions,
   }) {
     return UserProfile(
       name: name ?? this.name,
@@ -65,6 +68,7 @@ class UserProfile {
       isMidfielder: isMidfielder ?? this.isMidfielder,
       isDefender: isDefender ?? this.isDefender,
       profileCompleted: profileCompleted ?? this.profileCompleted,
+      numberOfOpinions: numberOfOpinions ?? this.numberOfOpinions,
     );
   }
 
@@ -81,6 +85,7 @@ class UserProfile {
       'is_midfielder': isMidfielder,
       'is_defender': isDefender,
       'profile_completed': profileCompleted,
+      'number_of_opinions': numberOfOpinions,
     };
   }
 
@@ -97,6 +102,7 @@ class UserProfile {
       isMidfielder: json['is_midfielder'] ?? false,
       isDefender: json['is_defender'] ?? false,
       profileCompleted: json['profile_completed'] ?? false,
+      numberOfOpinions: json['number_of_opinions'] ?? 0,
     );
   }
 }
