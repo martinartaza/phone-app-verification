@@ -103,36 +103,9 @@ class ProfileProvider with ChangeNotifier {
     _clearError();
 
     try {
-      // TODO: Aquí envío al servidor
-      // POST /api/profile/create
-      // Headers: Authorization: Bearer {token}
-      // Body: {
-      //   name: _profile.name,
-      //   age: _profile.age,
-      //   photo_base64: base64EncodedPhoto,
-      //   skills: {
-      //     velocidad: _profile.skills['velocidad'],
-      //     resistencia: _profile.skills['resistencia'],
-      //     tiro: _profile.skills['tiro'],
-      //     gambeta: _profile.skills['gambeta'],
-      //     pases: _profile.skills['pases']
-      //   },
-      //   is_goalkeeper: _profile.isGoalkeeper
-      // }
-      // 
-      // Respuesta esperada:
-      // {
-      //   user_skills: {velocidad: 80, resistencia: 70, ...},
-      //   average_skills: {velocidad: 0, resistencia: 0, ...}, // Inicialmente en 0
-      //   profile_completed: true,
-      //   user_id: "123",
-      //   phone_number: "+5491123456789"
-      // }
-
       final success = await _profileService.createProfile(_profile, token);
       
       if (success) {
-        // TODO: Aquí guardo localmente también
         await _profileService.saveProfileLocally(_profile);
         return true;
       } else {
@@ -152,21 +125,6 @@ class ProfileProvider with ChangeNotifier {
     _clearError();
 
     try {
-      // TODO: Aquí consulto al servidor
-      // GET /api/profile/me
-      // Headers: Authorization: Bearer {token}
-      // 
-      // Respuesta esperada:
-      // {
-      //   name: "Juan",
-      //   age: 25,
-      //   photo_url: "https://...",
-      //   user_skills: {velocidad: 80, resistencia: 70, ...},
-      //   average_skills: {velocidad: 65, resistencia: 75, ...},
-      //   is_goalkeeper: false,
-      //   profile_completed: true
-      // }
-
       final profile = await _profileService.getProfile(token);
       if (profile != null) {
         _profile = profile;

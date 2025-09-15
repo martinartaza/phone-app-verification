@@ -33,9 +33,11 @@ class ApiConfig {
   static const String createUserEndpoint = '/api/auth/request-code/';
   static const String verifyUserEndpoint = '/api/auth/verify-user/';
   static const String refreshTokenEndpoint = '/api/auth/refresh-token/';
+  static const String updateProfileEndpoint = '/api/auth/players/me/';
   
   // Full URLs
   static String get createUserUrl => '$baseUrl$createUserEndpoint';
   static String get verifyUserUrl => '$baseUrl$verifyUserEndpoint';
   static String get refreshTokenUrl => '$baseUrl$refreshTokenEndpoint';
+  static String get updateProfileUrl => '$baseUrl$updateProfileEndpoint';
 }

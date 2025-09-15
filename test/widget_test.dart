@@ -13,7 +13,7 @@ import 'package:matchday/main.dart';
 void main() {
   testWidgets('Phone verification app smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const PhoneVerificationApp());
+    await tester.pumpWidget(const MatchDayApp());
 
     // Verify that the phone input screen is displayed
     expect(find.text('Verificar teléfono'), findsOneWidget);

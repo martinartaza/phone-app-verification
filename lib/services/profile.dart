@@ -1,63 +1,99 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_profile.dart';
+import '../config/api_config.dart';
 
 class ProfileService {
   static const String _profileKey = 'user_profile';
 
   Future<bool> createProfile(UserProfile profile, String token) async {
     try {
-      // TODO: Implementar llamada real al API
-      // final url = Uri.parse('${ApiConfig.baseUrl}/api/profile/create/');
-      // 
-      // String? photoBase64;
-      // if (profile.photoPath != null) {
-      //   final bytes = await File(profile.photoPath!).readAsBytes();
-      //   photoBase64 = base64Encode(bytes);
-      // }
-      // 
-      // final response = await http.post(
-      //   url,
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': 'Bearer $token',
-      //   },
-      //   body: jsonEncode({
-      //     'name': profile.name,
-      //     'age': profile.age,
-      //     'photo_base64': photoBase64,
-      //     'skills': {
-      //       'velocidad': profile.skills['velocidad'],
-      //       'resistencia': profile.skills['resistencia'],
-      //       'tiro': profile.skills['tiro'],
-      //       'gambeta': profile.skills['gambeta'],
-      //       'pases': profile.skills['pases'],
-      //       'defensa': profile.skills['defensa'],
-      //     },
-      //     'is_goalkeeper': profile.isGoalkeeper,
-      //   }),
-      // );
-      // 
-      // if (response.statusCode == 201) {
-      //   final data = jsonDecode(response.body);
-      //   // Procesar respuesta del servidor
-      //   return true;
-      // }
-
-      // Mock: Simular éxito después de 2 segundos
-      await Future.delayed(const Duration(seconds: 2));
-      print('📤 MOCK API CALL - POST /api/profile/create/');
-      print('📤 Headers: Authorization: Bearer $token');
-      print('📤 Body: ${jsonEncode({
-        'name': profile.name,
-        'age': profile.age,
-        'photo_base64': profile.photoPath != null ? '[BASE64_PHOTO_DATA]' : null,
-        'skills': profile.skills,
-        'is_goalkeeper': profile.isGoalkeeper,
-      })}');
-      print('📥 Response: {user_skills: ${profile.skills}, average_skills: {all: 0}, profile_completed: true}');
+      final url = Uri.parse(ApiConfig.updateProfileUrl);
       
-      return true;
+      // Preparar self_perception según el formato esperado por la API (en inglés)
+      final selfPerception = {
+        'speed': profile.skills['velocidad']?.round() ?? 50,
+        'stamina': profile.skills['resistencia']?.round() ?? 50,
+        'shooting': profile.skills['tiro']?.round() ?? 50,
+        'dribbling': profile.skills['gambeta']?.round() ?? 50,
+        'passing': profile.skills['pases']?.round() ?? 50,
+        'defending': profile.skills['defensa']?.round() ?? 50,
+      };
+
+      http.Response response;
+
+      if (profile.photoPath != null) {
+        // Si hay foto, usar multipart/form-data
+        final request = http.MultipartRequest('PUT', url);
+        
+        request.headers['Authorization'] = 'Bearer $token';
+        
+        // Agregar campos del perfil
+        request.fields['name'] = profile.name;
+        request.fields['age'] = profile.age.toString();
+        request.fields['is_goalkeeper'] = profile.isGoalkeeper.toString();
+        request.fields['is_forward'] = profile.isStriker.toString();
+        request.fields['is_midfielder'] = profile.isMidfielder.toString();
+        request.fields['is_defender'] = profile.isDefender.toString();
+        request.fields['self_perception'] = jsonEncode(selfPerception);
+        
+        // Agregar foto
+        final file = File(profile.photoPath!);
+        if (await file.exists()) {
+          request.files.add(await http.MultipartFile.fromPath('photo', file.path));
+        }
+        
+        print('📤 API CALL - PUT ${ApiConfig.updateProfileEndpoint} (multipart)');
+        print('📤 Headers: Authorization: Bearer $token');
+        print('📤 Fields: ${request.fields}');
+        print('📤 Photo: ${profile.photoPath}');
+        
+        final streamedResponse = await request.send();
+        response = await http.Response.fromStream(streamedResponse);
+      } else {
+        // Si no hay foto, usar JSON
+        final body = {
+          'name': profile.name,
+          'age': profile.age,
+          'is_goalkeeper': profile.isGoalkeeper,
+          'is_forward': profile.isStriker,
+          'is_midfielder': profile.isMidfielder,
+          'is_defender': profile.isDefender,
+          'self_perception': selfPerception,
+        };
+
+        print('📤 API CALL - PUT ${ApiConfig.updateProfileEndpoint} (JSON)');
+        print('📤 Headers: Authorization: Bearer $token');
+        print('📤 Body: ${jsonEncode(body)}');
+
+        response = await http.put(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode(body),
+        );
+      }
+
+      print('📥 Response Status: ${response.statusCode}');
+      print('📥 Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Éxito - procesar respuesta si es necesario
+        try {
+          final data = jsonDecode(response.body);
+          print('✅ Profile updated successfully: $data');
+        } catch (e) {
+          print('✅ Profile updated successfully (no JSON response)');
+        }
+        return true;
+      } else {
+        print('❌ API Error: ${response.statusCode} - ${response.body}');
+        return false;
+      }
     } catch (e) {
       print('❌ Error creating profile: $e');
       return false;
@@ -66,33 +102,87 @@ class ProfileService {
 
   Future<UserProfile?> getProfile(String token) async {
     try {
-      // TODO: Implementar llamada real al API
-      // final url = Uri.parse('${ApiConfig.baseUrl}/api/profile/me/');
-      // 
-      // final response = await http.get(
-      //   url,
-      //   headers: {
-      //     'Authorization': 'Bearer $token',
-      //   },
-      // );
-      // 
-      // if (response.statusCode == 200) {
-      //   final data = jsonDecode(response.body);
-      //   return UserProfile.fromJson(data);
-      // }
+      final url = Uri.parse(ApiConfig.updateProfileUrl);
+      
+      print('📥 API CALL - GET ${ApiConfig.updateProfileEndpoint}');
+      print('📥 Headers: Authorization: Bearer $token');
+      
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+      
+      print('📥 Response Status: ${response.statusCode}');
+      print('📥 Response Body: ${response.body}');
 
-      // Mock: Intentar cargar desde almacenamiento local
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        
+        if (responseData['status'] == 'success' && responseData['data'] != null) {
+          final data = responseData['data'];
+          
+          // Mapear self_perception de inglés a español para uso interno
+          final selfPerception = data['self_perception'] as Map<String, dynamic>? ?? {};
+          final mappedSkills = <String, double>{
+            'velocidad': (selfPerception['speed'] ?? 50).toDouble(),
+            'resistencia': (selfPerception['stamina'] ?? 50).toDouble(),
+            'tiro': (selfPerception['shooting'] ?? 50).toDouble(),
+            'gambeta': (selfPerception['dribbling'] ?? 50).toDouble(),
+            'pases': (selfPerception['passing'] ?? 50).toDouble(),
+            'defensa': (selfPerception['defending'] ?? 50).toDouble(),
+          };
+          
+          // Construir URL completa de la foto si existe
+          String? fullPhotoUrl;
+          if (data['photo_url'] != null && data['photo_url'].toString().isNotEmpty) {
+            final photoPath = data['photo_url'].toString();
+            fullPhotoUrl = photoPath.startsWith('http') 
+                ? photoPath 
+                : '${ApiConfig.baseUrl}$photoPath';
+          }
+          
+          final profile = UserProfile(
+            name: data['name'] ?? '',
+            age: data['age'] ?? 30,
+            photoUrl: fullPhotoUrl,
+            skills: mappedSkills,
+            isGoalkeeper: data['is_goalkeeper'] ?? false,
+            isStriker: data['is_forward'] ?? false,
+            isMidfielder: data['is_midfielder'] ?? false,
+            isDefender: data['is_defender'] ?? false,
+            profileCompleted: true,
+          );
+          
+          print('✅ Profile loaded successfully from server');
+          return profile;
+        }
+      }
+      
+      // Si falla la API, intentar cargar desde almacenamiento local
+      print('⚠️ API failed, trying local storage...');
       final localProfile = await getProfileLocally();
       if (localProfile != null) {
-        print('📥 MOCK API CALL - GET /api/profile/me/');
-        print('📥 Headers: Authorization: Bearer $token');
-        print('📥 Response: Profile loaded from local storage');
+        print('📥 Profile loaded from local storage');
         return localProfile;
       }
 
       return null;
     } catch (e) {
       print('❌ Error getting profile: $e');
+      
+      // En caso de error, intentar cargar desde almacenamiento local
+      try {
+        final localProfile = await getProfileLocally();
+        if (localProfile != null) {
+          print('📥 Fallback: Profile loaded from local storage');
+          return localProfile;
+        }
+      } catch (localError) {
+        print('❌ Error loading from local storage: $localError');
+      }
+      
       return null;
     }
   }

@@ -22,6 +22,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      // Cargar perfil del servidor si hay token
+      if (authProvider.token != null) {
+        profileProvider.loadProfile(authProvider.token!);
+      }
+      
       _nameController.text = profileProvider.profile.name;
       _selectedAge = profileProvider.profile.age;
       
@@ -36,8 +43,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Actualizar la edad cuando el perfil cambie
+    // Actualizar los campos cuando el perfil cambie (ej: después de cargar del servidor)
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    
     if (_selectedAge != profileProvider.profile.age) {
       print('🔄 ProfileScreen didChangeDependencies:');
       print('  - _selectedAge: $_selectedAge');
@@ -45,6 +53,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _selectedAge = profileProvider.profile.age;
       });
+    }
+    
+    // Actualizar el nombre si cambió
+    if (_nameController.text != profileProvider.profile.name) {
+      _nameController.text = profileProvider.profile.name;
     }
   }
 
@@ -190,20 +203,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
           color: Colors.grey.shade200,
           border: Border.all(color: Colors.grey.shade300, width: 2),
         ),
-        child: profileProvider.profile.photoPath != null
-            ? ClipOval(
-                child: Image.file(
-                  File(profileProvider.profile.photoPath!),
-                  fit: BoxFit.cover,
-                ),
-              )
-            : Icon(
-                Icons.add_a_photo,
-                size: 40,
-                color: Colors.grey.shade600,
-              ),
+        child: _buildPhotoContent(profileProvider),
       ),
     );
+  }
+
+  Widget _buildPhotoContent(ProfileProvider profileProvider) {
+    // Prioridad: foto local > foto del servidor > icono por defecto
+    if (profileProvider.profile.photoPath != null) {
+      // Foto local (recién seleccionada)
+      return ClipOval(
+        child: Image.file(
+          File(profileProvider.profile.photoPath!),
+          fit: BoxFit.cover,
+        ),
+      );
+    } else if (profileProvider.profile.photoUrl != null && 
+               profileProvider.profile.photoUrl!.isNotEmpty) {
+      // Foto del servidor
+      return ClipOval(
+        child: Image.network(
+          profileProvider.profile.photoUrl!,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded / 
+                      loadingProgress.expectedTotalBytes!
+                    : null,
+                strokeWidth: 2,
+                color: const Color(0xFF8B5CF6),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            print('❌ Error loading profile photo: $error');
+            return Icon(
+              Icons.add_a_photo,
+              size: 40,
+              color: Colors.grey.shade600,
+            );
+          },
+        ),
+      );
+    } else {
+      // Icono por defecto
+      return Icon(
+        Icons.add_a_photo,
+        size: 40,
+        color: Colors.grey.shade600,
+      );
+    }
   }
 
   Widget _buildNameInput(ProfileProvider profileProvider) {
