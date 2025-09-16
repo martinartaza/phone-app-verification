@@ -110,12 +110,20 @@ class _VerificationScreenState extends State<VerificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              const Spacer(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height - 
+                         MediaQuery.of(context).padding.top - 
+                         MediaQuery.of(context).padding.bottom - 48,
+            ),
+            child: IntrinsicHeight(
+              child: Column(
+                children: [
+                  const Spacer(),
               
               // Icon
               Container(
@@ -311,8 +319,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 },
               ),
               
-              const Spacer(),
-            ],
+                  const Spacer(),
+                ],
+              ),
+            ),
           ),
         ),
       ),
