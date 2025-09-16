@@ -225,7 +225,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             padding: const EdgeInsets.all(16),
             children: [
               if (invProvider.fulbitosData.pendingFulbitos.isNotEmpty)
-                _buildSectionTitle('Invitaciones a Fulbitos'),
+                _buildCenteredDividerTitle('Invitaciones a Fulbitos'),
               ...invProvider.fulbitosData.pendingFulbitos.map((f) => _FulbitoItem(
                     fulbito: f,
                     trailing: Row(
@@ -237,24 +237,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ],
                     ),
                   )),
-
-              if (invProvider.fulbitosData.myFulbitos.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                _buildSectionTitle('Mis Fulbitos'),
-                ...invProvider.fulbitosData.myFulbitos.map((f) => _FulbitoItem(
-                      fulbito: f,
-                      trailing: const _CircleIcon(color: Color(0xFF8B5CF6), icon: Icons.admin_panel_settings),
-                    )),
-              ],
-
-              if (invProvider.fulbitosData.acceptFulbitos.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                _buildSectionTitle('Fulbitos Aceptados'),
-                ...invProvider.fulbitosData.acceptFulbitos.map((f) => _FulbitoItem(
-                      fulbito: f,
-                      trailing: const _CircleIcon(color: Color(0xFF3B82F6), icon: Icons.visibility),
-                    )),
-              ],
+              const SizedBox(height: 16),
+              if (invProvider.fulbitosData.myFulbitos.isNotEmpty ||
+                  invProvider.fulbitosData.acceptFulbitos.isNotEmpty)
+                _buildCenteredDividerTitle('Mis Fulbitos'),
+              ...[
+                ...invProvider.fulbitosData.myFulbitos,
+                ...invProvider.fulbitosData.acceptFulbitos,
+              ].map((f) => _FulbitoItem(
+                    fulbito: f,
+                    trailing: f.isOwner
+                        ? const _CircleIcon(color: Color(0xFF8B5CF6), icon: Icons.admin_panel_settings)
+                        : const _CircleIcon(color: Color(0xFF3B82F6), icon: Icons.visibility),
+                  )),
               const SizedBox(height: 80),
             ],
           );
@@ -362,6 +357,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           fontWeight: FontWeight.w700,
           color: Color(0xFF374151),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCenteredDividerTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Divider(thickness: 1, color: Color(0xFFE5E7EB)),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF374151),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const Expanded(
+            child: Divider(thickness: 1, color: Color(0xFFE5E7EB)),
+          ),
+        ],
       ),
     );
   }
