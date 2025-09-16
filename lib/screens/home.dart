@@ -5,6 +5,7 @@ import '../providers/auth.dart' as auth_provider;
 import '../providers/profile.dart';
 import '../providers/invitations.dart';
 import '../models/network.dart';
+import 'vote_player_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -336,7 +337,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       username: u.username,
                       phone: u.phone,
                       photoUrl: u.photoUrl,
-                      trailing: const _CircleIcon(color: Color(0xFF3B82F6), icon: Icons.visibility),
+                      trailing: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => VotePlayerScreen(player: u),
+                            ),
+                          );
+                        },
+                        child: const _CircleIcon(color: Color(0xFF3B82F6), icon: Icons.visibility),
+                      ),
                     )),
               ],
               const SizedBox(height: 80),

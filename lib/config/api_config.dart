@@ -35,6 +35,7 @@ class ApiConfig {
   static const String refreshTokenEndpoint = '/api/auth/refresh-token/';
   static const String updateProfileEndpoint = '/api/auth/players/me/';
   static const String invitationsEndpoint = '/api/auth/invitation/all/';
+  static const String votePlayerEndpoint = '/api/auth/players/';
   
   // Full URLs
   static String get createUserUrl => '$baseUrl$createUserEndpoint';
@@ -42,4 +43,5 @@ class ApiConfig {
   static String get refreshTokenUrl => '$baseUrl$refreshTokenEndpoint';
   static String get updateProfileUrl => '$baseUrl$updateProfileEndpoint';
   static String get invitationsUrl => '$baseUrl$invitationsEndpoint';
+  static String getVotePlayerUrl(String uuid) => '$baseUrl$votePlayerEndpoint$uuid/opinion/';
 }
