@@ -7,6 +7,7 @@ import 'providers/auth.dart' as auth_provider;
 import 'providers/phone_input.dart' as phone_input_provider;
 import 'providers/verification.dart' as verification_provider;
 import 'providers/profile.dart';
+import 'providers/invitations.dart';
 
 void main() {
   runApp(const MatchDayApp());
@@ -23,6 +24,7 @@ class MatchDayApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => phone_input_provider.PhoneInputProvider()),
         ChangeNotifierProvider(create: (_) => verification_provider.VerificationProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => InvitationsProvider()),
       ],
       child: MaterialApp(
         title: 'MatchDay',
