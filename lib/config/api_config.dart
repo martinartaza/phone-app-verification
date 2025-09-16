@@ -36,6 +36,8 @@ class ApiConfig {
   static const String updateProfileEndpoint = '/api/auth/players/me/';
   static const String invitationsEndpoint = '/api/auth/invitation/all/';
   static const String votePlayerEndpoint = '/api/auth/players/';
+  static const String createFulbitoEndpoint = '/api/auth/fulbito/';
+  static const String invitePlayerEndpoint = '/api/auth/invitation/network/invite/';
   
   // Full URLs
   static String get createUserUrl => '$baseUrl$createUserEndpoint';
@@ -44,4 +46,9 @@ class ApiConfig {
   static String get updateProfileUrl => '$baseUrl$updateProfileEndpoint';
   static String get invitationsUrl => '$baseUrl$invitationsEndpoint';
   static String getVotePlayerUrl(String uuid) => '$baseUrl$votePlayerEndpoint$uuid/opinion/';
+  static String get createFulbitoUrl => '$baseUrl$createFulbitoEndpoint';
+  static String get invitePlayerUrl => '$baseUrl$invitePlayerEndpoint';
+  
+  // WhatsApp message configuration
+  static const String whatsappMessage = 'Descarga fulbito de la playstore';
 }

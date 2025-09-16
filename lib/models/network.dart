@@ -4,6 +4,7 @@ class NetworkUser {
   final String phone;
   final String? photoUrl; // full URL
   final int invitationId;
+  final String? invitationMessage;
 
   NetworkUser({
     required this.username,
@@ -11,6 +12,7 @@ class NetworkUser {
     required this.phone,
     required this.photoUrl,
     required this.invitationId,
+    this.invitationMessage,
   });
 }
 

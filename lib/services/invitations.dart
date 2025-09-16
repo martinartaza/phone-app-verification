@@ -45,6 +45,7 @@ class InvitationsService {
           phone: e['phone'] ?? '',
           photoUrl: mapPhoto(e['url_photo']),
           invitationId: e['invitation_id'] ?? 0,
+          invitationMessage: e['invitation_message'],
         );
       }).toList();
     }

@@ -6,6 +6,8 @@ import '../providers/profile.dart';
 import '../providers/invitations.dart';
 import '../models/network.dart';
 import 'vote_player_screen.dart';
+import 'create_fulbito_screen.dart';
+import 'invite_player_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -320,6 +322,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     username: u.username,
                     phone: u.phone,
                     photoUrl: u.photoUrl,
+                    invitationMessage: u.invitationMessage,
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: const [
@@ -337,6 +340,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       username: u.username,
                       phone: u.phone,
                       photoUrl: u.photoUrl,
+                      invitationMessage: null, // No mostrar mensaje en "Tu red"
                       trailing: GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -405,7 +409,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       onTap: () {
         final activeTab = _tabController.index; // 0: Fulbitos, 1: Jugadores
         print('🔘 Botón + presionado en tab: $activeTab');
-        // Aquí más adelante decidimos la acción según la pestaña activa.
+        
+        if (activeTab == 0) {
+          // Pestaña Fulbitos - Crear nuevo fulbito
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CreateFulbitoScreen(),
+            ),
+          );
+        } else {
+          // Pestaña Jugadores - Invitar jugador
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const InvitePlayerScreen(),
+            ),
+          );
+        }
       },
       child: Container(
         width: 64,
@@ -439,12 +460,14 @@ class _InvitationItem extends StatelessWidget {
   final String username;
   final String phone;
   final String? photoUrl;
+  final String? invitationMessage;
   final Widget trailing;
 
   const _InvitationItem({
     required this.username,
     required this.phone,
     required this.photoUrl,
+    this.invitationMessage,
     required this.trailing,
   });
 
@@ -499,6 +522,30 @@ class _InvitationItem extends StatelessWidget {
                     color: Color(0xFF6B7280),
                   ),
                 ),
+                if (invitationMessage != null && invitationMessage!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: const Color(0xFFE5E7EB),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      invitationMessage!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF374151),
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
