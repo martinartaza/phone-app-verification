@@ -19,11 +19,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _searchController.addListener(_onSearchChanged);
     
     // Cargar perfil al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -40,7 +43,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+    });
+  }
+
+  // Métodos de filtrado
+  List<Fulbito> _filterFulbitos(List<Fulbito> fulbitos) {
+    if (_searchQuery.isEmpty) return fulbitos;
+    
+    return fulbitos.where((fulbito) {
+      return fulbito.name.toLowerCase().contains(_searchQuery) ||
+             fulbito.place.toLowerCase().contains(_searchQuery) ||
+             fulbito.day.toLowerCase().contains(_searchQuery) ||
+             fulbito.hour.toLowerCase().contains(_searchQuery) ||
+             fulbito.ownerName.toLowerCase().contains(_searchQuery);
+    }).toList();
+  }
+
+  List<NetworkUser> _filterNetworkUsers(List<NetworkUser> users) {
+    if (_searchQuery.isEmpty) return users;
+    
+    return users.where((user) {
+      return user.username.toLowerCase().contains(_searchQuery) ||
+             user.phone.toLowerCase().contains(_searchQuery);
+    }).toList();
   }
 
   @override
@@ -92,26 +124,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
       child: Row(
         children: [
-          // Lupa
-          const Icon(
-            Icons.search,
-            color: Colors.white,
-            size: 24,
-          ),
-          
-          const SizedBox(width: 16),
-          
-          // Título
-          const Expanded(
-            child: Text(
-              'MatchDay',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
+          // Campo de búsqueda
+          Expanded(
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withOpacity(0.3)),
+              ),
+              child: TextField(
+                controller: _searchController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'Buscar...',
+                  hintStyle: TextStyle(color: Colors.white70),
+                  prefixIcon: Icon(Icons.search, color: Colors.white70, size: 20),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
               ),
             ),
           ),
+          
+          const SizedBox(width: 12),
           
           // Foto de perfil
           Consumer<ProfileProvider>(
@@ -240,22 +276,63 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             );
           }
 
+          // Filtrar datos según la búsqueda
+          final filteredPendingFulbitos = _filterFulbitos(invProvider.fulbitosData.pendingFulbitos);
+          final filteredMyFulbitos = _filterFulbitos(invProvider.fulbitosData.myFulbitos);
+          final filteredAcceptFulbitos = _filterFulbitos(invProvider.fulbitosData.acceptFulbitos);
+
+          // Si hay búsqueda activa y no hay resultados
+          if (_searchQuery.isNotEmpty && 
+              filteredPendingFulbitos.isEmpty && 
+              filteredMyFulbitos.isEmpty && 
+              filteredAcceptFulbitos.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.search_off,
+                    size: 64,
+                    color: Color(0xFF6B7280),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No se encontraron resultados',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Color(0xFF6B7280),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Intenta con otros términos de búsqueda',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
+          }
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              if (invProvider.fulbitosData.pendingFulbitos.isNotEmpty)
+              if (filteredPendingFulbitos.isNotEmpty)
                 _buildCenteredDividerTitle('Invitaciones a Fulbitos'),
-              ...invProvider.fulbitosData.pendingFulbitos.map((f) => _FulbitoItem(
+              ...filteredPendingFulbitos.map((f) => _FulbitoItem(
                     fulbito: f,
                     isPending: true,
                   )),
               const SizedBox(height: 16),
-              if (invProvider.fulbitosData.myFulbitos.isNotEmpty ||
-                  invProvider.fulbitosData.acceptFulbitos.isNotEmpty)
+              if (filteredMyFulbitos.isNotEmpty || filteredAcceptFulbitos.isNotEmpty)
                 _buildCenteredDividerTitle('Mis Fulbitos'),
               ...[
-                ...invProvider.fulbitosData.myFulbitos,
-                ...invProvider.fulbitosData.acceptFulbitos,
+                ...filteredMyFulbitos,
+                ...filteredAcceptFulbitos,
               ].map((f) => _FulbitoItem(
                     fulbito: f,
                     trailing: f.isOwner
@@ -337,12 +414,52 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             );
           }
 
+          // Filtrar datos según la búsqueda
+          final filteredInvitationPending = _filterNetworkUsers(invProvider.networkData.invitationPending);
+          final filteredNetwork = _filterNetworkUsers(invProvider.networkData.network);
+
+          // Si hay búsqueda activa y no hay resultados
+          if (_searchQuery.isNotEmpty && 
+              filteredInvitationPending.isEmpty && 
+              filteredNetwork.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.search_off,
+                    size: 64,
+                    color: Color(0xFF6B7280),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No se encontraron resultados',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Color(0xFF6B7280),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Intenta con otros términos de búsqueda',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
+          }
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              if (invProvider.networkData.invitationPending.isNotEmpty)
+              if (filteredInvitationPending.isNotEmpty)
                 _buildSectionTitle('Invitaciones'),
-              ...invProvider.networkData.invitationPending.map((u) => _InvitationItem(
+              ...filteredInvitationPending.map((u) => _InvitationItem(
                     username: u.username,
                     phone: u.phone,
                     photoUrl: u.photoUrl,
@@ -351,10 +468,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     isPending: true,
                   )),
 
-              if (invProvider.networkData.network.isNotEmpty) ...[
+              if (filteredNetwork.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _buildSectionTitle('Tu red'),
-                ...invProvider.networkData.network.map((u) => _InvitationItem(
+                ...filteredNetwork.map((u) => _InvitationItem(
                       username: u.username,
                       phone: u.phone,
                       photoUrl: u.photoUrl,
