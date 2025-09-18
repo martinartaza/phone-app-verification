@@ -21,7 +21,7 @@ class ApiConfig {
       return 'http://192.168.100.150:8000';
     }
     */
-    return 'https://1e5fad975fde.ngrok-free.app';
+    return 'http://192.168.100.150:8000';
   }
   //static const String baseUrl = 'http://192.168.100.150:8000';
   // Configuraciones manuales para override si es necesario:
@@ -38,6 +38,8 @@ class ApiConfig {
   static const String votePlayerEndpoint = '/api/auth/players/';
   static const String createFulbitoEndpoint = '/api/auth/fulbito/';
   static const String invitePlayerEndpoint = '/api/auth/invitation/network/invite/';
+  static const String invitationStatusEndpoint = '/api/auth/invitation/network/';
+  static const String fulbitoStatusEndpoint = '/api/auth/invitation/fulbito/';
   
   // Full URLs
   static String get createUserUrl => '$baseUrl$createUserEndpoint';
@@ -48,7 +50,15 @@ class ApiConfig {
   static String getVotePlayerUrl(String uuid) => '$baseUrl$votePlayerEndpoint$uuid/opinion/';
   static String get createFulbitoUrl => '$baseUrl$createFulbitoEndpoint';
   static String get invitePlayerUrl => '$baseUrl$invitePlayerEndpoint';
+  static String getInvitationStatusUrl(int invitationId) => '$baseUrl$invitationStatusEndpoint$invitationId/status/';
+  static String getFulbitoStatusUrl(int invitationId) => '$baseUrl$fulbitoStatusEndpoint$invitationId/status/';
   
   // WhatsApp message configuration
   static const String whatsappMessage = 'Descarga fulbito de la playstore';
+  
+  // Maintenance message configuration
+  static const String maintenanceTitle = '🔧 Mantenimiento Programado';
+  static const String maintenanceMessage = 'Estamos actualizando la aplicación para mejorar tu experiencia. Por favor, intenta nuevamente en unos minutos.';
+  static const String retryButtonText = 'Reintentar';
+  static const String laterButtonText = 'Más tarde';
 }

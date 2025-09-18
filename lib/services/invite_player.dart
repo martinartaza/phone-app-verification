@@ -27,7 +27,7 @@ class InvitePlayerService {
         return {
           'success': true,
           'data': responseData,
-          'shouldOpenWhatsApp': responseData['message'] == 'user not found',
+          'shouldOpenWhatsApp': responseData['status'] == 'user not found',
         };
       } else {
         return {

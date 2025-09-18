@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/network.dart';
+import '../utils/server_error_handler.dart';
 
 class InvitationsService {
   Future<({NetworkData networkData, FulbitosData fulbitosData})> fetchAllData(String token) async {
@@ -13,6 +14,13 @@ class InvitationsService {
         'Authorization': 'Bearer $token',
       },
     );
+
+    // Verificar si hay errores del servidor
+    if (ServerErrorHandler.isServerError(response) || 
+        ServerErrorHandler.isServerDown(response) || 
+        ServerErrorHandler.isMaintenanceMode(response)) {
+      throw Exception('MAINTENANCE_MODE');
+    }
 
     if (response.statusCode != 200) {
       throw Exception('Failed to load data: ${response.statusCode}');

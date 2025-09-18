@@ -5,9 +5,10 @@ import '../providers/auth.dart' as auth_provider;
 import '../providers/profile.dart';
 import '../providers/invitations.dart';
 import '../models/network.dart';
+import '../widgets/maintenance_modal.dart';
 import 'vote_player_screen.dart';
-import 'create_fulbito_screen.dart';
-import 'invite_player_screen.dart';
+import 'create_fulbito.dart';
+import 'invite_player.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -182,6 +183,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           }
 
           if (invProvider.error != null) {
+            if (invProvider.error == 'MAINTENANCE_MODE') {
+              // Mostrar modal de mantenimiento
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+                if (authProvider.token != null) {
+                  MaintenanceModal.show(context, onRetry: () => invProvider.load(authProvider.token!));
+                }
+              });
+              return const Center(
+                child: Text(
+                  'MAINTENANCE_MODE',
+                  style: TextStyle(color: Colors.red),
+                ),
+              );
+            }
             return Center(
               child: Text(
                 invProvider.error!,
@@ -231,14 +247,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 _buildCenteredDividerTitle('Invitaciones a Fulbitos'),
               ...invProvider.fulbitosData.pendingFulbitos.map((f) => _FulbitoItem(
                     fulbito: f,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        _CircleIcon(color: Color(0xFF10B981), icon: Icons.check),
-                        SizedBox(width: 8),
-                        _CircleIcon(color: Color(0xFFEF4444), icon: Icons.close),
-                      ],
-                    ),
+                    isPending: true,
                   )),
               const SizedBox(height: 16),
               if (invProvider.fulbitosData.myFulbitos.isNotEmpty ||
@@ -271,6 +280,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           }
 
           if (invProvider.error != null) {
+            if (invProvider.error == 'MAINTENANCE_MODE') {
+              // Mostrar modal de mantenimiento
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+                if (authProvider.token != null) {
+                  MaintenanceModal.show(context, onRetry: () => invProvider.load(authProvider.token!));
+                }
+              });
+              return const Center(
+                child: Text(
+                  'MAINTENANCE_MODE',
+                  style: TextStyle(color: Colors.red),
+                ),
+              );
+            }
             return Center(
               child: Text(
                 invProvider.error!,
@@ -323,14 +347,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     phone: u.phone,
                     photoUrl: u.photoUrl,
                     invitationMessage: u.invitationMessage,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        _CircleIcon(color: Color(0xFF10B981), icon: Icons.check),
-                        SizedBox(width: 8),
-                        _CircleIcon(color: Color(0xFFEF4444), icon: Icons.close),
-                      ],
-                    ),
+                    invitationId: u.invitationId,
+                    isPending: true,
                   )),
 
               if (invProvider.networkData.network.isNotEmpty) ...[
@@ -456,20 +474,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 }
 
-class _InvitationItem extends StatelessWidget {
+class _InvitationItem extends StatefulWidget {
   final String username;
   final String phone;
   final String? photoUrl;
   final String? invitationMessage;
-  final Widget trailing;
+  final Widget? trailing;
+  final int? invitationId;
+  final bool isPending;
 
   const _InvitationItem({
     required this.username,
     required this.phone,
     required this.photoUrl,
     this.invitationMessage,
-    required this.trailing,
+    this.trailing,
+    this.invitationId,
+    this.isPending = false,
   });
+
+  @override
+  State<_InvitationItem> createState() => _InvitationItemState();
+}
+
+class _InvitationItemState extends State<_InvitationItem> {
+  bool _isProcessing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -497,8 +526,8 @@ class _InvitationItem extends StatelessWidget {
               color: Colors.grey.shade200,
             ),
             clipBehavior: Clip.antiAlias,
-            child: photoUrl != null && photoUrl!.isNotEmpty
-                ? Image.network(photoUrl!, fit: BoxFit.cover)
+            child: widget.photoUrl != null && widget.photoUrl!.isNotEmpty
+                ? Image.network(widget.photoUrl!, fit: BoxFit.cover)
                 : const Icon(Icons.person, color: Colors.grey),
           ),
           const SizedBox(width: 12),
@@ -507,7 +536,7 @@ class _InvitationItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  username,
+                  widget.username,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -516,13 +545,13 @@ class _InvitationItem extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  phone,
+                  widget.phone,
                   style: const TextStyle(
                     fontSize: 13,
                     color: Color(0xFF6B7280),
                   ),
                 ),
-                if (invitationMessage != null && invitationMessage!.isNotEmpty) ...[
+                if (widget.invitationMessage != null && widget.invitationMessage!.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -535,7 +564,7 @@ class _InvitationItem extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      invitationMessage!,
+                      widget.invitationMessage!,
                       style: const TextStyle(
                         fontSize: 12,
                         color: Color(0xFF374151),
@@ -549,10 +578,112 @@ class _InvitationItem extends StatelessWidget {
               ],
             ),
           ),
-          trailing,
+          if (widget.isPending && widget.invitationId != null)
+            _buildActionButtons()
+          else if (widget.trailing != null)
+            widget.trailing!,
         ],
       ),
     );
+  }
+
+  Widget _buildActionButtons() {
+    if (_isProcessing) {
+      return const SizedBox(
+        width: 36,
+        height: 36,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: _acceptInvitation,
+          child: const _CircleIcon(
+            color: Color(0xFF10B981),
+            icon: Icons.check,
+          ),
+        ),
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: _rejectInvitation,
+          child: const _CircleIcon(
+            color: Color(0xFFEF4444),
+            icon: Icons.close,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _acceptInvitation() async {
+    if (widget.invitationId == null) return;
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+    final invitationsProvider = Provider.of<InvitationsProvider>(context, listen: false);
+
+    if (authProvider.token != null) {
+      final result = await invitationsProvider.handleAcceptInvitation(
+        authProvider.token!,
+        widget.invitationId!,
+        context,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: result['isError'] ? Colors.red : Colors.green,
+          ),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+      });
+    }
+  }
+
+  Future<void> _rejectInvitation() async {
+    if (widget.invitationId == null) return;
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+    final invitationsProvider = Provider.of<InvitationsProvider>(context, listen: false);
+
+    if (authProvider.token != null) {
+      final result = await invitationsProvider.handleRejectInvitation(
+        authProvider.token!,
+        widget.invitationId!,
+        context,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: result['isError'] ? Colors.red : Colors.orange,
+          ),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+      });
+    }
   }
 }
 
@@ -582,14 +713,23 @@ class _CircleIcon extends StatelessWidget {
   }
 }
 
-class _FulbitoItem extends StatelessWidget {
+class _FulbitoItem extends StatefulWidget {
   final Fulbito fulbito;
-  final Widget trailing;
+  final Widget? trailing;
+  final bool isPending;
 
   const _FulbitoItem({
     required this.fulbito,
-    required this.trailing,
+    this.trailing,
+    this.isPending = false,
   });
+
+  @override
+  State<_FulbitoItem> createState() => _FulbitoItemState();
+}
+
+class _FulbitoItemState extends State<_FulbitoItem> {
+  bool _isProcessing = false;
 
   String _formatDay(String day) {
     switch (day.toLowerCase()) {
@@ -640,8 +780,8 @@ class _FulbitoItem extends StatelessWidget {
                   color: Colors.grey.shade200,
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: fulbito.ownerPhotoUrl != null && fulbito.ownerPhotoUrl!.isNotEmpty
-                    ? Image.network(fulbito.ownerPhotoUrl!, fit: BoxFit.cover)
+                child: widget.fulbito.ownerPhotoUrl != null && widget.fulbito.ownerPhotoUrl!.isNotEmpty
+                    ? Image.network(widget.fulbito.ownerPhotoUrl!, fit: BoxFit.cover)
                     : const Icon(Icons.person, color: Colors.grey),
               ),
               const SizedBox(width: 12),
@@ -650,7 +790,7 @@ class _FulbitoItem extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      fulbito.name,
+                      widget.fulbito.name,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -659,7 +799,7 @@ class _FulbitoItem extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      fulbito.ownerName,
+                      widget.fulbito.ownerName,
                       style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFF6B7280),
@@ -668,7 +808,10 @@ class _FulbitoItem extends StatelessWidget {
                   ],
                 ),
               ),
-              trailing,
+              if (widget.isPending && widget.fulbito.invitationId != null)
+                _buildFulbitoActionButtons()
+              else if (widget.trailing != null)
+                widget.trailing!,
             ],
           ),
           const SizedBox(height: 12),
@@ -678,7 +821,7 @@ class _FulbitoItem extends StatelessWidget {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  fulbito.place,
+                  widget.fulbito.place,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[600],
@@ -693,7 +836,7 @@ class _FulbitoItem extends StatelessWidget {
               Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
               const SizedBox(width: 4),
               Text(
-                '${_formatDay(fulbito.day)} ${_formatTime(fulbito.hour)}',
+                '${_formatDay(widget.fulbito.day)} ${_formatTime(widget.fulbito.hour)}',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[600],
@@ -704,5 +847,104 @@ class _FulbitoItem extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildFulbitoActionButtons() {
+    if (_isProcessing) {
+      return const SizedBox(
+        width: 36,
+        height: 36,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: _acceptFulbito,
+          child: const _CircleIcon(
+            color: Color(0xFF10B981),
+            icon: Icons.check,
+          ),
+        ),
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: _rejectFulbito,
+          child: const _CircleIcon(
+            color: Color(0xFFEF4444),
+            icon: Icons.close,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _acceptFulbito() async {
+    if (widget.fulbito.invitationId == null) return;
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+    final invitationsProvider = Provider.of<InvitationsProvider>(context, listen: false);
+
+    if (authProvider.token != null) {
+      final result = await invitationsProvider.handleAcceptFulbito(
+        authProvider.token!,
+        widget.fulbito.invitationId!,
+        context,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: result['isError'] ? Colors.red : Colors.green,
+          ),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+      });
+    }
+  }
+
+  Future<void> _rejectFulbito() async {
+    if (widget.fulbito.invitationId == null) return;
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+    final invitationsProvider = Provider.of<InvitationsProvider>(context, listen: false);
+
+    if (authProvider.token != null) {
+      final result = await invitationsProvider.handleRejectFulbito(
+        authProvider.token!,
+        widget.fulbito.invitationId!,
+        context,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: result['isError'] ? Colors.red : Colors.orange,
+          ),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+      });
+    }
   }
 }

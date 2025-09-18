@@ -36,20 +36,20 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D2D2D),
+        backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           'Invitar Jugador',
           style: TextStyle(
-            color: Colors.white,
+            color: Color(0xFF111827),
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF111827)),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -79,17 +79,14 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF4CAF50), Color(0xFF45A049)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withOpacity(0.3),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: const Offset(0, 5),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -97,7 +94,7 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
         children: [
           Icon(
             Icons.person_add,
-            color: Colors.white,
+            color: Color(0xFF10B981),
             size: 30,
           ),
           SizedBox(width: 15),
@@ -108,7 +105,7 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
                 Text(
                   'Invitar a tu Red',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Color(0xFF111827),
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -117,7 +114,7 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
                 Text(
                   'Invita jugadores a formar parte de tu red',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: Color(0xFF6B7280),
                     fontSize: 14,
                   ),
                 ),
@@ -136,7 +133,7 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
         const Text(
           'Número de Teléfono',
           style: TextStyle(
-            color: Colors.white,
+            color: Color(0xFF111827),
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -148,24 +145,24 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
           inputFormatters: [
             FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s]')),
           ],
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: Color(0xFF111827)),
           decoration: InputDecoration(
             hintText: 'Ejemplo: +5493814437123',
-            hintStyle: TextStyle(color: Colors.grey[400]),
-            prefixIcon: const Icon(Icons.phone, color: Colors.green),
+            hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+            prefixIcon: const Icon(Icons.phone, color: Color(0xFF10B981)),
             filled: true,
-            fillColor: const Color(0xFF2D2D2D),
+            fillColor: const Color(0xFFF9FAFB),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[600]!),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.green, width: 2),
+              borderSide: const BorderSide(color: Color(0xFF10B981), width: 2),
             ),
           ),
         ),
@@ -180,7 +177,7 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
         const Text(
           'Mensaje de Invitación',
           style: TextStyle(
-            color: Colors.white,
+            color: Color(0xFF111827),
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -189,24 +186,24 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
         TextFormField(
           controller: _messageController,
           maxLines: 3,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: Color(0xFF111827)),
           decoration: InputDecoration(
             hintText: 'Escribe un mensaje personalizado...',
-            hintStyle: TextStyle(color: Colors.grey[400]),
-            prefixIcon: const Icon(Icons.message, color: Colors.green),
+            hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+            prefixIcon: const Icon(Icons.message, color: Color(0xFF10B981)),
             filled: true,
-            fillColor: const Color(0xFF2D2D2D),
+            fillColor: const Color(0xFFF9FAFB),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[600]!),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.green, width: 2),
+              borderSide: const BorderSide(color: Color(0xFF10B981), width: 2),
             ),
           ),
         ),
@@ -221,12 +218,12 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
       child: ElevatedButton(
         onPressed: _isLoading ? null : _sendInvitation,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
+          backgroundColor: const Color(0xFF10B981),
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          elevation: 5,
+          elevation: 2,
         ),
         child: _isLoading
             ? const SizedBox(
@@ -252,23 +249,35 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
+        color: const Color(0xFFFEF2F2),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFFFECACA)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: Colors.red),
+          const Icon(Icons.error_outline, color: Color(0xFFDC2626)),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               _error!,
-              style: const TextStyle(color: Colors.red),
+              style: const TextStyle(color: Color(0xFFDC2626)),
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _cleanPhoneNumber(String phoneNumber) {
+    // Remover espacios, guiones, paréntesis y otros caracteres no numéricos excepto +
+    String cleaned = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    
+    // Si no tiene +, agregarlo
+    if (!cleaned.startsWith('+')) {
+      cleaned = '+$cleaned';
+    }
+    
+    return cleaned;
   }
 
   Future<void> _sendInvitation() async {
@@ -302,9 +311,12 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
       return;
     }
 
+    // Limpiar el número de teléfono antes de enviarlo
+    final cleanedPhoneNumber = _cleanPhoneNumber(_phoneController.text.trim());
+
     final result = await InvitePlayerService.invitePlayer(
       token: token,
-      phoneNumber: _phoneController.text.trim(),
+      phoneNumber: cleanedPhoneNumber,
       message: _messageController.text.trim(),
     );
 
@@ -328,7 +340,7 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
 
         // Si debe abrir WhatsApp
         if (result['shouldOpenWhatsApp']) {
-          await _openWhatsApp(_phoneController.text.trim(), _messageController.text.trim());
+          await _openWhatsApp(cleanedPhoneNumber, _messageController.text.trim());
         }
 
         // Volver al home
@@ -343,18 +355,40 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
 
   Future<void> _openWhatsApp(String phoneNumber, String message) async {
     final whatsappMessage = '$message - ${ApiConfig.whatsappMessage}';
-    final whatsappUrl = 'https://wa.me/${phoneNumber.replaceAll(RegExp(r'[^\d]'), '')}?text=${Uri.encodeComponent(whatsappMessage)}';
+    
+    // El número ya viene limpio desde _sendInvitation, pero por seguridad lo limpiamos de nuevo
+    String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    
+    // Remover el + para la URL de WhatsApp
+    if (cleanPhone.startsWith('+')) {
+      cleanPhone = cleanPhone.substring(1);
+    }
+    
+    final whatsappUrl = 'https://wa.me/$cleanPhone?text=${Uri.encodeComponent(whatsappMessage)}';
     
     try {
       final uri = Uri.parse(whatsappUrl);
+      
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         // Fallback: intentar abrir WhatsApp Web
-        final webUrl = 'https://web.whatsapp.com/send?phone=${phoneNumber.replaceAll(RegExp(r'[^\d]'), '')}&text=${Uri.encodeComponent(whatsappMessage)}';
+        final webUrl = 'https://web.whatsapp.com/send?phone=$cleanPhone&text=${Uri.encodeComponent(whatsappMessage)}';
         final webUri = Uri.parse(webUrl);
+        
         if (await canLaunchUrl(webUri)) {
           await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        } else {
+          // Si no puede abrir WhatsApp, mostrar un mensaje con el número y mensaje
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('No se pudo abrir WhatsApp. Número: +$cleanPhone'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
         }
       }
     } catch (e) {
@@ -362,7 +396,7 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al abrir WhatsApp: $e'),
-            backgroundColor: Colors.orange,
+            backgroundColor: Colors.red,
           ),
         );
       }
