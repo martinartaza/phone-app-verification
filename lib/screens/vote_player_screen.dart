@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/network.dart';
 import '../widgets/profile_form_widget.dart';
-import '../services/vote.dart';
 import '../providers/auth.dart' as auth_provider;
+import '../providers/vote.dart';
 
 class VotePlayerScreen extends StatefulWidget {
   final NetworkUser player;
@@ -15,30 +15,29 @@ class VotePlayerScreen extends StatefulWidget {
 }
 
 class _VotePlayerScreenState extends State<VotePlayerScreen> {
-  final VoteService _voteService = VoteService();
-  
-  // Votación del usuario (empieza en 50 para todas las habilidades)
-  Map<String, double> _userVote = {
-    'velocidad': 50.0,
-    'resistencia': 50.0,
-    'tiro': 50.0,
-    'gambeta': 50.0,
-    'pases': 50.0,
-    'defensa': 50.0,
-  };
 
-  // Promedio del jugador (simulado por ahora, vendrá de la API)
-  Map<String, double> _playerAverage = {
-    'velocidad': 75.0,
-    'resistencia': 10.0,
-    'tiro': 60.0,
-    'gambeta': 45.0,
-    'pases': 30.0,
-    'defensa': 20.0,
-  };
+  @override
+  void initState() {
+    super.initState();
+    _loadPlayerDetails();
+  }
 
-  bool _isLoading = false;
-  String? _error;
+  @override
+  void dispose() {
+    // Limpiar el estado del provider cuando se cierre la pantalla
+    final voteProvider = Provider.of<VoteProvider>(context, listen: false);
+    voteProvider.clearState();
+    super.dispose();
+  }
+
+  Future<void> _loadPlayerDetails() async {
+    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+    final voteProvider = Provider.of<VoteProvider>(context, listen: false);
+    
+    if (authProvider.token != null) {
+      await voteProvider.loadPlayerDetails(authProvider.token!, widget.player.uuid);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,96 +60,97 @@ class _VotePlayerScreenState extends State<VotePlayerScreen> {
         ),
       ),
       body: SafeArea(
-        child: ProfileFormWidget(
-          title: 'Te doy mi opinión',
-          subtitle: 'Evalúa las habilidades de ${widget.player.username}',
-          buttonText: 'Votación',
-          name: widget.player.username,
-          age: 30, // TODO: obtener edad del jugador desde la API
-          isNameEditable: false,
-          isAgeEditable: false,
-          skills: _userVote, // La votación del usuario (azul en el hexágono)
-          averageSkills: _playerAverage, // El promedio del jugador (rojo en el hexágono)
-          numberOfOpinions: 5, // TODO: obtener desde la API
-          photoUrl: widget.player.photoUrl,
-          photoPath: null,
-          isGoalkeeper: false, // TODO: obtener desde la API
-          isStriker: false, // TODO: obtener desde la API
-          isMidfielder: false, // TODO: obtener desde la API
-          isDefender: false, // TODO: obtener desde la API
-          showPositionCheckboxes: false, // No mostrar checkboxes en votación
-          onNameChanged: null, // No editable
-          onAgeChanged: null, // No editable
-          onSkillChanged: (skill, value) {
-            setState(() {
-              _userVote[skill] = value;
-            });
+        child: Consumer<VoteProvider>(
+          builder: (context, voteProvider, child) {
+            if (voteProvider.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            if (voteProvider.error != null) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                    const SizedBox(height: 16),
+                    Text(
+                      voteProvider.error!,
+                      style: const TextStyle(fontSize: 16, color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _loadPlayerDetails,
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
+                ),
+              );
+            }
+            
+            if (voteProvider.playerDetails == null) {
+              return const Center(child: Text('No se pudieron cargar los datos del jugador'));
+            }
+            
+            final playerDetails = voteProvider.playerDetails!;
+            return ProfileFormWidget(
+              title: 'Te doy mi opinión',
+              subtitle: 'Evalúa las habilidades de ${playerDetails.firstName}',
+              buttonText: 'Votación',
+              name: playerDetails.firstName,
+              age: playerDetails.age,
+              isNameEditable: false,
+              isAgeEditable: false,
+              skills: voteProvider.userVote, // La votación del usuario (azul en el hexágono)
+              averageSkills: playerDetails.averageOpinion, // El promedio del jugador (rojo en el hexágono)
+              numberOfOpinions: playerDetails.numberOfOpinions,
+              photoUrl: playerDetails.photoUrl != null 
+                  ? 'http://192.168.100.150:8000${playerDetails.photoUrl}' 
+                  : null,
+              photoPath: null,
+              isGoalkeeper: playerDetails.isGoalkeeper,
+              isStriker: playerDetails.isForward,
+              isMidfielder: playerDetails.isMidfielder,
+              isDefender: playerDetails.isDefender,
+              showPositionCheckboxes: false, // No mostrar checkboxes en votación
+              onNameChanged: null, // No editable
+              onAgeChanged: null, // No editable
+              onSkillChanged: (skill, value) {
+                voteProvider.updateVote(skill, value);
+              },
+              onGoalkeeperChanged: null, // No mostrar
+              onStrikerChanged: null, // No mostrar
+              onMidfielderChanged: null, // No mostrar
+              onDefenderChanged: null, // No mostrar
+              onPhotoPicked: null, // No editable
+              onButtonPressed: _submitVote,
+              isLoading: voteProvider.isLoading,
+              error: voteProvider.error,
+              canSave: true,
+            );
           },
-          onGoalkeeperChanged: null, // No mostrar
-          onStrikerChanged: null, // No mostrar
-          onMidfielderChanged: null, // No mostrar
-          onDefenderChanged: null, // No mostrar
-          onPhotoPicked: null, // No editable
-          onButtonPressed: _submitVote,
-          isLoading: _isLoading,
-          error: _error,
-          canSave: true,
         ),
       ),
     );
   }
 
   Future<void> _submitVote() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+    final voteProvider = Provider.of<VoteProvider>(context, listen: false);
+    
+    if (authProvider.token == null) return;
 
-    try {
-      final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
-      final token = authProvider.token;
-      
-      if (token == null) {
-        setState(() {
-          _error = 'No hay token de autenticación';
-          _isLoading = false;
-        });
-        return;
-      }
+    final success = await voteProvider.submitVote(authProvider.token!, widget.player.uuid);
 
-      final success = await _voteService.submitVote(
-        token, 
-        widget.player.uuid, 
-        _userVote
-      );
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
-        if (success) {
-          // Mostrar mensaje de éxito y volver al home
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Votación enviada para ${widget.player.username}'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          
-          Navigator.pop(context);
-        } else {
-          setState(() {
-            _error = 'Error al enviar la votación. Intenta nuevamente.';
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _error = 'Error de conexión. Verifica tu internet.';
-        });
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Votación enviada para ${widget.player.username}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
       }
     }
   }

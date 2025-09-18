@@ -175,11 +175,13 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
                 ),
                 const SizedBox(height: 16),
                 
-                DualHexagonChart(
-                  selfPerceptionSkills: fulbitoProvider.selectedPlayer!.averageSkills,
-                  averageOpinionSkills: fulbitoProvider.selectedPlayer!.averageSkills,
-                  numberOfOpinions: 1,
-                  size: 200,
+                Center(
+                  child: DualHexagonChart(
+                    selfPerceptionSkills: fulbitoProvider.selectedPlayer!.averageSkills,
+                    averageOpinionSkills: fulbitoProvider.selectedPlayer!.averageSkills,
+                    numberOfOpinions: 1,
+                    size: 200,
+                  ),
                 ),
               ] else ...[
                 const Text(
@@ -192,20 +194,22 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
                 ),
                 const SizedBox(height: 16),
                 
-                Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'Selecciona un jugador',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF6B7280),
-                        fontSize: 14,
+                Center(
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Selecciona un jugador',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -238,6 +242,55 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
                 ...fulbitoProvider.players.map((player) => _buildPlayerItem(player)),
               
               // Espacio adicional al final para evitar overflow
+              const SizedBox(height: 16),
+
+              // Botón para invitar jugadores
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/fulbito/invite-players');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ).copyWith(
+                    backgroundColor: MaterialStateProperty.all(Colors.transparent),
+                  ),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.person_add, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text(
+                            'Invitar jugadores',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 80),
             ],
           ),
@@ -303,13 +356,13 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isSelected 
-                  ? const Color(0xFF8B5CF6).withOpacity(0.2)
-                  : const Color(0xFF8B5CF6).withOpacity(0.1),
+                  ? const Color(0xFF8B5CF6).withOpacity(0.25)
+                  : const Color(0xFFF5F3FF),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isSelected 
                     ? const Color(0xFF8B5CF6)
-                    : const Color(0xFF8B5CF6).withOpacity(0.3),
+                    : const Color(0xFF8B5CF6).withOpacity(0.2),
                 width: isSelected ? 2 : 1,
               ),
               boxShadow: [
@@ -322,6 +375,17 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
             ),
             child: Row(
               children: [
+                if (isSelected) ...[
+                  Container(
+                    width: 6,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5CF6),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
                 Container(
                   width: 48,
                   height: 48,
@@ -373,7 +437,7 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
                       // Icono según el tipo de jugador
                       Icon(
                         isAdmin ? Icons.admin_panel_settings : Icons.person,
-                        color: isAdmin ? const Color(0xFFEF4444) : const Color(0xFF8B5CF6),
+                        color: isAdmin ? const Color(0xFFEF4444) : const Color(0xFF7C3AED),
                         size: 20,
                       ),
                       const SizedBox(width: 8),

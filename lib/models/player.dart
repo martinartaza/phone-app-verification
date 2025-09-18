@@ -34,10 +34,22 @@ class Player {
       return {};
     }
     
+    // Mapeo de inglés a español
+    final Map<String, String> skillMapping = {
+      'speed': 'velocidad',
+      'passing': 'pases',
+      'stamina': 'resistencia',
+      'shooting': 'tiro_arco',
+      'defending': 'defensa',
+      'dribbling': 'gambeta',
+    };
+    
     final Map<String, double> result = {};
     skills.forEach((key, value) {
       if (value is num) {
-        result[key] = value.toDouble();
+        // Usar la clave en español para el mapeo interno
+        final spanishKey = skillMapping[key] ?? key;
+        result[spanishKey] = value.toDouble();
       }
     });
     
@@ -47,15 +59,28 @@ class Player {
 
 class FulbitoPlayersResponse {
   final List<Player> players;
+  final List<Player> pendingAccept;
+  final List<Player> enabledToRegister;
+  final List<Player> rejected;
 
   FulbitoPlayersResponse({
     required this.players,
+    required this.pendingAccept,
+    required this.enabledToRegister,
+    required this.rejected,
   });
 
   factory FulbitoPlayersResponse.fromJson(Map<String, dynamic> json) {
     final playersList = json['players'] as List<dynamic>? ?? [];
+    final pendingList = json['pending_accept'] as List<dynamic>? ?? [];
+    final enabledList = json['enabled_to_register'] as List<dynamic>? ?? [];
+    final rejectedList = json['rejected'] as List<dynamic>? ?? [];
+
     return FulbitoPlayersResponse(
       players: playersList.map((player) => Player.fromJson(player)).toList(),
+      pendingAccept: pendingList.map((p) => Player.fromJson(p)).toList(),
+      enabledToRegister: enabledList.map((p) => Player.fromJson(p)).toList(),
+      rejected: rejectedList.map((p) => Player.fromJson(p)).toList(),
     );
   }
 }

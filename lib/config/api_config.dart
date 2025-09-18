@@ -36,11 +36,14 @@ class ApiConfig {
   static const String updateProfileEndpoint = '/api/auth/players/me/';
   static const String invitationsEndpoint = '/api/auth/invitation/all/';
   static const String votePlayerEndpoint = '/api/auth/players/';
+  static const String getPlayerDetailsEndpoint = '/api/auth/players/';
+  static const String setPlayerOpinionEndpoint = '/api/auth/players/';
   static const String createFulbitoEndpoint = '/api/auth/fulbito/';
   static const String invitePlayerEndpoint = '/api/auth/invitation/network/invite/';
   static const String invitationStatusEndpoint = '/api/auth/invitation/network/';
   static const String fulbitoStatusEndpoint = '/api/auth/invitation/fulbito/';
   static const String fulbitoPlayersEndpoint = '/api/auth/fulbito/';
+  static const String fulbitoInviteEndpoint = '/api/auth/invitation/fulbito/';
   
   // Full URLs
   static String get createUserUrl => '$baseUrl$createUserEndpoint';
@@ -49,11 +52,14 @@ class ApiConfig {
   static String get updateProfileUrl => '$baseUrl$updateProfileEndpoint';
   static String get invitationsUrl => '$baseUrl$invitationsEndpoint';
   static String getVotePlayerUrl(String uuid) => '$baseUrl$votePlayerEndpoint$uuid/opinion/';
+  static String getPlayerDetailsUrl(String uuid) => '$baseUrl$getPlayerDetailsEndpoint$uuid/opinion/';
+  static String setPlayerOpinionUrl(String uuid) => '$baseUrl$setPlayerOpinionEndpoint$uuid/opinion/set/';
   static String get createFulbitoUrl => '$baseUrl$createFulbitoEndpoint';
   static String get invitePlayerUrl => '$baseUrl$invitePlayerEndpoint';
   static String getInvitationStatusUrl(int invitationId) => '$baseUrl$invitationStatusEndpoint$invitationId/status/';
   static String getFulbitoStatusUrl(int invitationId) => '$baseUrl$fulbitoStatusEndpoint$invitationId/status/';
   static String getFulbitoPlayersUrl(int fulbitoId) => '$baseUrl$fulbitoPlayersEndpoint$fulbitoId/players';
+  static String getFulbitoInviteUrl(int fulbitoId) => '$baseUrl$fulbitoInviteEndpoint$fulbitoId/invite/';
   
   // WhatsApp message configuration
   static const String whatsappMessage = 'Descarga fulbito de la playstore';

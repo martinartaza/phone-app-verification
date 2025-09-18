@@ -16,7 +16,7 @@ class ProfileService {
       final selfPerception = {
         'speed': profile.skills['velocidad']?.round() ?? 50,
         'stamina': profile.skills['resistencia']?.round() ?? 50,
-        'shooting': profile.skills['tiro']?.round() ?? 50,
+        'shooting': profile.skills['tiro_arco']?.round() ?? 50,
         'dribbling': profile.skills['gambeta']?.round() ?? 50,
         'passing': profile.skills['pases']?.round() ?? 50,
         'defending': profile.skills['defensa']?.round() ?? 50,
@@ -128,7 +128,7 @@ class ProfileService {
           final mappedSkills = <String, double>{
             'velocidad': (selfPerception['speed'] ?? 50).toDouble(),
             'resistencia': (selfPerception['stamina'] ?? 50).toDouble(),
-            'tiro': (selfPerception['shooting'] ?? 50).toDouble(),
+            'tiro_arco': (selfPerception['shooting'] ?? 50).toDouble(),
             'gambeta': (selfPerception['dribbling'] ?? 50).toDouble(),
             'pases': (selfPerception['passing'] ?? 50).toDouble(),
             'defensa': (selfPerception['defending'] ?? 50).toDouble(),
@@ -139,7 +139,7 @@ class ProfileService {
           final mappedAverageSkills = <String, double>{
             'velocidad': (averageOpinion['speed'] ?? 0).toDouble(),
             'resistencia': (averageOpinion['stamina'] ?? 0).toDouble(),
-            'tiro': (averageOpinion['shooting'] ?? 0).toDouble(),
+            'tiro_arco': (averageOpinion['shooting'] ?? 0).toDouble(),
             'gambeta': (averageOpinion['dribbling'] ?? 0).toDouble(),
             'pases': (averageOpinion['passing'] ?? 0).toDouble(),
             'defensa': (averageOpinion['defending'] ?? 0).toDouble(),

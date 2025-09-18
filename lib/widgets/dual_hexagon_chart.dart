@@ -38,7 +38,7 @@ class DualHexagonChart extends StatelessWidget {
 class DualHexagonPainter extends CustomPainter {
   final Map<String, double> selfPerceptionSkills;
   final Map<String, double> averageOpinionSkills;
-  final List<String> skillOrder = ['velocidad', 'resistencia', 'tiro', 'gambeta', 'pases', 'defensa'];
+  final List<String> skillOrder = ['velocidad', 'resistencia', 'tiro_arco', 'gambeta', 'pases', 'defensa'];
   final List<String> skillLabels = ['Velocidad', 'Resistencia', 'Tiro a arco', 'Gambeta', 'Pases', 'Defensa'];
 
   DualHexagonPainter(this.selfPerceptionSkills, this.averageOpinionSkills);
@@ -91,6 +91,10 @@ class DualHexagonPainter extends CustomPainter {
   }
 
   void _drawSkillsHexagon(Canvas canvas, Offset center, double radius, Color color, Map<String, double> skills) {
+    // Verificar si hay datos válidos para dibujar
+    final hasValidData = skills.values.any((value) => value > 0);
+    if (!hasValidData) return;
+
     final paint = Paint()
       ..color = color.withOpacity(0.2)
       ..style = PaintingStyle.fill;

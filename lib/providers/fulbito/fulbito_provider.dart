@@ -8,6 +8,9 @@ class FulbitoProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   List<Player> _players = [];
+  List<Player> _pendingAccept = [];
+  List<Player> _enabledToRegister = [];
+  List<Player> _rejected = [];
   Player? _selectedPlayer;
   bool _isAdmin = false;
   final FulbitoPlayersService _playersService = FulbitoPlayersService();
@@ -17,6 +20,9 @@ class FulbitoProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   List<Player> get players => _players;
+  List<Player> get pendingAccept => _pendingAccept;
+  List<Player> get enabledToRegister => _enabledToRegister;
+  List<Player> get rejected => _rejected;
   Player? get selectedPlayer => _selectedPlayer;
   bool get isAdmin => _isAdmin;
 
@@ -35,6 +41,9 @@ class FulbitoProvider with ChangeNotifier {
       // Cargar jugadores reales desde la API
       final playersResponse = await _playersService.getFulbitoPlayers(token, fulbito.id);
       _players = playersResponse.players;
+      _pendingAccept = playersResponse.pendingAccept;
+      _enabledToRegister = playersResponse.enabledToRegister;
+      _rejected = playersResponse.rejected;
       
       // Seleccionar el primer jugador por defecto si hay jugadores
       if (_players.isNotEmpty) {
@@ -80,6 +89,9 @@ class FulbitoProvider with ChangeNotifier {
   void clear() {
     _currentFulbito = null;
     _players.clear();
+    _pendingAccept.clear();
+    _enabledToRegister.clear();
+    _rejected.clear();
     _selectedPlayer = null;
     _isAdmin = false;
     _error = null;
