@@ -30,59 +30,6 @@ class DualHexagonChart extends StatelessWidget {
         
         const SizedBox(height: 16),
         
-        // Leyenda
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Autopercepción
-            Row(
-              children: [
-                Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6366F1), // Azul
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Autopercepción',
-                  style: TextStyle(
-                    color: Color(0xFF6366F1),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(width: 24),
-            
-            // Opiniones
-            Row(
-              children: [
-                Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444), // Rojo
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Opiniones: $numberOfOpinions',
-                  style: const TextStyle(
-                    color: Color(0xFFEF4444),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ],
     );
   }

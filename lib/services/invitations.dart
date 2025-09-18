@@ -89,6 +89,7 @@ class InvitationsService {
           ownerPhone: e['owner_phone'] ?? '',
           ownerPhotoUrl: mapPhoto(e['owner_photo']),
           invitationId: e['invitation_id'],
+          capacity: e['capacity'] ?? 10,
           createdAt: e['created_at'] ?? '',
           updatedAt: e['updated_at'] ?? '',
         );

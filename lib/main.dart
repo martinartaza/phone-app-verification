@@ -8,6 +8,8 @@ import 'providers/phone_input.dart' as phone_input_provider;
 import 'providers/verification.dart' as verification_provider;
 import 'providers/profile.dart';
 import 'providers/invitations.dart';
+import 'providers/home.dart';
+import 'providers/fulbito/fulbito_provider.dart';
 
 void main() {
   runApp(const MatchDayApp());
@@ -25,6 +27,8 @@ class MatchDayApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => verification_provider.VerificationProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => InvitationsProvider()),
+        ChangeNotifierProvider(create: (_) => HomeProvider()),
+        ChangeNotifierProvider(create: (_) => FulbitoProvider()),
       ],
       child: MaterialApp(
         title: 'MatchDay',

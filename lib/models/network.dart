@@ -38,6 +38,7 @@ class Fulbito {
   final String ownerPhone;
   final String? ownerPhotoUrl; // full URL
   final int? invitationId;
+  final int capacity;
   final String createdAt;
   final String updatedAt;
 
@@ -53,6 +54,7 @@ class Fulbito {
     required this.ownerPhone,
     required this.ownerPhotoUrl,
     required this.invitationId,
+    required this.capacity,
     required this.createdAt,
     required this.updatedAt,
   });

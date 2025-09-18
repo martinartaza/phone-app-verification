@@ -4,11 +4,13 @@ import 'package:provider/provider.dart';
 import '../providers/auth.dart' as auth_provider;
 import '../providers/profile.dart';
 import '../providers/invitations.dart';
+import '../providers/home.dart';
 import '../models/network.dart';
 import '../widgets/maintenance_modal.dart';
 import 'vote_player_screen.dart';
 import 'create_fulbito.dart';
 import 'invite_player.dart';
+import 'fulbito/fulbito_details.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -19,14 +21,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _searchController.addListener(_onSearchChanged);
     
     // Cargar perfil al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -43,36 +42,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void dispose() {
     _tabController.dispose();
-    _searchController.dispose();
     super.dispose();
-  }
-
-  void _onSearchChanged() {
-    setState(() {
-      _searchQuery = _searchController.text.toLowerCase();
-    });
-  }
-
-  // Métodos de filtrado
-  List<Fulbito> _filterFulbitos(List<Fulbito> fulbitos) {
-    if (_searchQuery.isEmpty) return fulbitos;
-    
-    return fulbitos.where((fulbito) {
-      return fulbito.name.toLowerCase().contains(_searchQuery) ||
-             fulbito.place.toLowerCase().contains(_searchQuery) ||
-             fulbito.day.toLowerCase().contains(_searchQuery) ||
-             fulbito.hour.toLowerCase().contains(_searchQuery) ||
-             fulbito.ownerName.toLowerCase().contains(_searchQuery);
-    }).toList();
-  }
-
-  List<NetworkUser> _filterNetworkUsers(List<NetworkUser> users) {
-    if (_searchQuery.isEmpty) return users;
-    
-    return users.where((user) {
-      return user.username.toLowerCase().contains(_searchQuery) ||
-             user.phone.toLowerCase().contains(_searchQuery);
-    }).toList();
   }
 
   @override
@@ -133,16 +103,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: Colors.white.withOpacity(0.3)),
               ),
-              child: TextField(
-                controller: _searchController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: 'Buscar...',
-                  hintStyle: TextStyle(color: Colors.white70),
-                  prefixIcon: Icon(Icons.search, color: Colors.white70, size: 20),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
+              child: Consumer<HomeProvider>(
+                builder: (context, homeProvider, child) {
+                  return TextField(
+                    controller: homeProvider.searchController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      hintText: 'Buscar...',
+                      hintStyle: TextStyle(color: Colors.white70),
+                      prefixIcon: Icon(Icons.search, color: Colors.white70, size: 20),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -212,8 +186,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget _buildFulbitosTab() {
     return Container(
       color: Colors.grey.shade50,
-      child: Consumer<InvitationsProvider>(
-        builder: (context, invProvider, child) {
+      child: Consumer2<InvitationsProvider, HomeProvider>(
+        builder: (context, invProvider, homeProvider, child) {
           if (invProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -276,16 +250,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             );
           }
 
-          // Filtrar datos según la búsqueda
-          final filteredPendingFulbitos = _filterFulbitos(invProvider.fulbitosData.pendingFulbitos);
-          final filteredMyFulbitos = _filterFulbitos(invProvider.fulbitosData.myFulbitos);
-          final filteredAcceptFulbitos = _filterFulbitos(invProvider.fulbitosData.acceptFulbitos);
+          // Filtrar datos según la búsqueda usando el provider
+          final filteredPendingFulbitos = homeProvider.filterFulbitos(invProvider.fulbitosData.pendingFulbitos);
+          final filteredMyFulbitos = homeProvider.filterFulbitos(invProvider.fulbitosData.myFulbitos);
+          final filteredAcceptFulbitos = homeProvider.filterFulbitos(invProvider.fulbitosData.acceptFulbitos);
 
           // Si hay búsqueda activa y no hay resultados
-          if (_searchQuery.isNotEmpty && 
-              filteredPendingFulbitos.isEmpty && 
-              filteredMyFulbitos.isEmpty && 
-              filteredAcceptFulbitos.isEmpty) {
+          if (!homeProvider.hasFulbitosResults(
+            pendingFulbitos: invProvider.fulbitosData.pendingFulbitos,
+            myFulbitos: invProvider.fulbitosData.myFulbitos,
+            acceptFulbitos: invProvider.fulbitosData.acceptFulbitos,
+          )) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -350,8 +325,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget _buildJugadoresTab() {
     return Container(
       color: Colors.grey.shade50,
-      child: Consumer<InvitationsProvider>(
-        builder: (context, invProvider, child) {
+      child: Consumer2<InvitationsProvider, HomeProvider>(
+        builder: (context, invProvider, homeProvider, child) {
           if (invProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -414,14 +389,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             );
           }
 
-          // Filtrar datos según la búsqueda
-          final filteredInvitationPending = _filterNetworkUsers(invProvider.networkData.invitationPending);
-          final filteredNetwork = _filterNetworkUsers(invProvider.networkData.network);
+          // Filtrar datos según la búsqueda usando el provider
+          final filteredInvitationPending = homeProvider.filterNetworkUsers(invProvider.networkData.invitationPending);
+          final filteredNetwork = homeProvider.filterNetworkUsers(invProvider.networkData.network);
 
           // Si hay búsqueda activa y no hay resultados
-          if (_searchQuery.isNotEmpty && 
-              filteredInvitationPending.isEmpty && 
-              filteredNetwork.isEmpty) {
+          if (!homeProvider.hasUsersResults(
+            invitationPending: invProvider.networkData.invitationPending,
+            network: invProvider.networkData.network,
+          )) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -870,23 +846,33 @@ class _FulbitoItemState extends State<_FulbitoItem> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return GestureDetector(
+      onTap: widget.isPending ? null : () {
+        // Solo navegar si no es una invitación pendiente
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FulbitoDetailsScreen(fulbito: widget.fulbito),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Row(
             children: [
               Container(
@@ -961,7 +947,22 @@ class _FulbitoItemState extends State<_FulbitoItem> {
               ),
             ],
           ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.group, size: 16, color: Colors.grey[600]),
+              const SizedBox(width: 4),
+              Text(
+                'Capacidad: ${widget.fulbito.capacity} jugadores',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
         ],
+      ),
       ),
     );
   }
