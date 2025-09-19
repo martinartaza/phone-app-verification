@@ -1,0 +1,366 @@
+# DESARROLLO DE FUNCIONALIDAD DE INSCRIPCIÓN
+
+## 📋 DESCRIPCIÓN GENERAL
+Esta funcionalidad permite a los usuarios inscribirse en fulbitos cuando se abre el período de inscripción. El sistema maneja timing, capacidad, suplentes y sincronización automática sin WebSockets.
+
+## 🎯 OBJETIVOS PRINCIPALES
+- Permitir inscripción automática cuando se abre el período
+- Manejar capacidad limitada (ej: 10 jugadores)
+- Gestionar suplentes cuando se llena la capacidad
+- Sincronización automática con el servidor
+- UI intuitiva y responsive
+
+## 🔧 APIS REQUERIDAS
+
+### 1. API de Estado de Inscripción (FUSIONADA)
+**GET /api/auth/fulbito/{id}/registrations/**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "fulbito_id": 3,
+    "registration_open": false,
+    "opens_at": "2024-09-21T22:00:00Z",
+    "current_time": "2024-09-19T15:30:00Z",
+    "time_until_open": "2 days, 6 hours, 30 minutes",
+    "capacity": 10,
+    "registered_count": 0,
+    "can_register": false,
+    "players": [
+      {
+        "id": 1,
+        "username": "jugador1",
+        "phone": "+5493812345678",
+        "photo_url": "/media/photo1.jpg",
+        "registered_at": "2024-09-21T22:00:15Z",
+        "position": 1,
+        "averageSkills": {
+          "speed": 75,
+          "passing": 60,
+          "stamina": 80,
+          "shooting": 70,
+          "dribbling": 65,
+          "defending": 55
+        }
+      }
+    ],
+    "spots_available": 10,
+    "is_user_registered": false,
+    "user_position": null
+  }
+}
+```
+
+### 2. API de Inscripción
+**POST /api/auth/fulbito/{id}/register/**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "registration_id": 123,
+    "position": 5,
+    "registered_at": "2024-09-21T22:00:15Z",
+    "message": "Inscripción exitosa"
+  }
+}
+```
+
+### 3. API de Home (ACTUALIZADA)
+**GET /api/auth/invitation/all/**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "nearby_fulbito_seconds": 7200,  // NUEVO CAMPO
+    "fulbitos": {
+      "my_fulbitos": [
+        {
+          "id": 3,
+          "name": "Veteranos 47",
+          "registration_status": {  // NUEVOS CAMPOS
+            "is_open": false,
+            "opens_at": "2024-09-21T22:00:00Z",
+            "registered_count": 3,
+            "capacity": 10,
+            "can_register": false,
+            "is_user_registered": false,
+            "user_position": null
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+## 🎨 INTERFAZ GRÁFICA
+
+### Pantalla de Inscripción (Pestaña 3 del FulbitoDetailsScreen)
+
+```
+┌─────────────────────────────────────┐
+│ 📅 Inscripción: Martes 23 Sep 20:00 │
+│ ✅ Inscripción ABIERTA              │
+│                                     │
+│ 👥 Jugadores inscritos (3/10):      │
+│ ┌─────────────────────────────────┐ │
+│ │ 🥇 1. Juan Pérez   22:00:15    │ │
+│ │ 🥈 2. María López  22:00:23    │ │
+│ │ 🥉 3. Carlos Ruiz  22:00:31    │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ [📝 INSCRIBIRME]                    │
+└─────────────────────────────────────┘
+```
+
+### Estados de la UI
+
+#### 1. Inscripción Cerrada
+```
+┌─────────────────────────────────────┐
+│ 📅 Inscripción: Martes 23 Sep 20:00 │
+│ 🔴 Inscripción CERRADA              │
+│                                     │
+│ ⏰ Se abre en: 2 días, 6 horas      │
+│                                     │
+│ 👥 Jugadores inscritos (0/10):       │
+│ ┌─────────────────────────────────┐ │
+│ │        (Lista vacía)            │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ [🚫 INSCRIPCIÓN NO DISPONIBLE]      │
+└─────────────────────────────────────┘
+```
+
+#### 2. Inscripción Abierta
+```
+┌─────────────────────────────────────┐
+│ 📅 Inscripción: Martes 23 Sep 20:00 │
+│ ✅ Inscripción ABIERTA              │
+│                                     │
+│ 👥 Jugadores inscritos (3/10):       │
+│ ┌─────────────────────────────────┐ │
+│ │ 🥇 1. Juan Pérez   22:00:15    │ │
+│ │ 🥈 2. María López  22:00:23    │ │
+│ │ 🥉 3. Carlos Ruiz  22:00:31    │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ [📝 INSCRIBIRME]                    │
+└─────────────────────────────────────┘
+```
+
+#### 3. Usuario Ya Inscrito
+```
+┌─────────────────────────────────────┐
+│ 📅 Inscripción: Martes 23 Sep 20:00 │
+│ ✅ Inscripción ABIERTA              │
+│                                     │
+│ 👥 Jugadores inscritos (3/10):       │
+│ ┌─────────────────────────────────┐ │
+│ │ 🥇 1. Juan Pérez   22:00:15    │ │
+│ │ 🥈 2. María López  22:00:23    │ │
+│ │ 🥉 3. Carlos Ruiz  22:00:31    │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ ✅ YA ESTÁS INSCRITO (#3)           │
+│ [❌ CANCELAR INSCRIPCIÓN]           │
+└─────────────────────────────────────┘
+```
+
+## ⚙️ LÓGICA DE TIMING
+
+### Campo `nearby_fulbito_seconds`
+- **Ubicación**: Raíz de la respuesta de `/api/auth/invitation/all/`
+- **Valor**: Segundos hasta la próxima apertura de inscripción
+- **Ejemplo**: `7200` = 2 horas, `300` = 5 minutos
+
+### Estrategia de Sincronización
+
+#### 1. Estado Inicial
+```
+API responde: nearby_fulbito_seconds: 7200 (2 horas)
+App: "Falta mucho, no hago nada especial"
+```
+
+#### 2. Se Acerca el Momento (≤ 10 minutos)
+```
+API responde: nearby_fulbito_seconds: 480 (8 minutos)
+App: "Programo consulta en 475 segundos"
+```
+
+#### 3. Últimos Segundos (≤ 20 segundos)
+```
+API responde: nearby_fulbito_seconds: 15 (15 segundos)
+App: "Programo consulta en 14 segundos"
+```
+
+#### 4. Se Abre la Inscripción
+```
+API responde: nearby_fulbito_seconds: 0
+App: "¡Inscripción abierta! Actualizo UI y badges"
+```
+
+## 🏠 BADGES EN EL HOME
+
+### Badge de Estado
+- 🔴 **"Inscripción cerrada"** - cuando `registration_status.is_open = false`
+- 🟡 **"Se abre en 2h"** - cuando está cerca de abrir
+- 🟢 **"Inscripción abierta"** - cuando `registration_status.is_open = true`
+- ✅ **"Ya inscrito #3"** - cuando `registration_status.is_user_registered = true`
+
+### Badge de Capacidad
+- **"3/10"** - mostrando `registered_count/capacity`
+
+## 🔄 FLUJO DE LA APLICACIÓN
+
+### 1. En el Home
+- **API**: `/api/auth/invitation/all/` (con campos de inscripción)
+- **Muestra**: Badges de estado y capacidad
+- **Acción**: Click en icono "i" → va a detalles
+
+### 2. En Detalles del Fulbito
+- **API**: `/api/auth/fulbito/{id}/registrations/` (completa)
+- **Muestra**: Lista completa de inscritos con habilidades
+- **Acción**: Botón inscribirse si está disponible
+
+### 3. Al Inscribirse
+- **API**: `POST /api/auth/fulbito/{id}/register/`
+- **Actualización**: Recargar la API de registrations
+
+## 🎯 CASOS DE USO
+
+### Caso 1: Inscripción Normal
+1. Usuario ve fulbito en home
+2. Click en icono "i" → va a detalles
+3. Pestaña "Inscripción" muestra estado
+4. Click "INSCRIBIRME" → se inscribe
+5. UI se actualiza automáticamente
+
+### Caso 2: Capacidad Llena
+1. Usuario intenta inscribirse
+2. Sistema verifica capacidad
+3. Si está llena → va a lista de suplentes
+4. Si hay espacio → se inscribe normalmente
+
+### Caso 3: Timing Automático
+1. App consulta API cada vez que va al home
+2. Cuando `nearby_fulbito_seconds ≤ 600` → activa timer
+3. Timer programa consulta automática
+4. UI se actualiza cuando se abre la inscripción
+
+## 🚨 MANEJO DE ERRORES
+
+### 1. Fallos de API
+- **Reintentar** en 30 segundos
+- **Mostrar mensaje** de error al usuario
+- **Mantener estado** anterior
+
+### 2. Pérdida de Conexión
+- **Pausar timers** cuando no hay conexión
+- **Reactivar** cuando vuelve la conexión
+- **Sincronizar** con el servidor
+
+### 3. Cambios de Timing
+- **Recalcular** automáticamente
+- **Actualizar** UI en tiempo real
+- **Notificar** al usuario
+
+## 📱 CONSIDERACIONES MÓVILES
+
+### 1. Background/Foreground
+- **Pausar timers** cuando app está en background
+- **Reactivar** cuando vuelve a foreground
+- **Sincronizar** con servidor
+
+### 2. Notificaciones
+- **Push notifications** cuando se abre inscripción
+- **Badges** en el icono de la app
+- **Sonidos** opcionales
+
+### 3. Optimización de Batería
+- **Timers eficientes** solo cuando es necesario
+- **Cancelar timers** cuando no se necesita
+- **Sincronización inteligente**
+
+## 🔧 IMPLEMENTACIÓN TÉCNICA
+
+### HomeProvider
+```dart
+class HomeProvider {
+  Timer? _registrationTimer;
+  int? _nearbyFulbitoSeconds;
+  
+  void _handleNearbyFulbitoSeconds(int seconds) {
+    if (seconds <= 600) {  // 10 minutos
+      _scheduleNextCheck(seconds - 5);
+    } else if (seconds <= 20) {  // 20 segundos
+      _scheduleNextCheck(seconds - 1);
+    }
+  }
+  
+  void _scheduleNextCheck(int delaySeconds) {
+    _registrationTimer?.cancel();
+    _registrationTimer = Timer(Duration(seconds: delaySeconds), () {
+      _refreshData(); // Vuelve a consultar la API
+    });
+  }
+}
+```
+
+### FulbitoProvider
+```dart
+class FulbitoProvider {
+  Future<void> loadRegistrationStatus(int fulbitoId) async {
+    // Cargar estado de inscripción
+  }
+  
+  Future<bool> registerForFulbito(int fulbitoId) async {
+    // Inscribirse en el fulbito
+  }
+  
+  Future<void> cancelRegistration(int fulbitoId) async {
+    // Cancelar inscripción
+  }
+}
+```
+
+## 📋 CHECKLIST DE DESARROLLO
+
+### Backend
+- [ ] Implementar API `/api/auth/fulbito/{id}/registrations/`
+- [ ] Implementar API `POST /api/auth/fulbito/{id}/register/`
+- [ ] Agregar campo `nearby_fulbito_seconds` a `/api/auth/invitation/all/`
+- [ ] Agregar campos de `registration_status` a fulbitos
+- [ ] Manejar capacidad y suplentes
+- [ ] Implementar lógica de timing
+
+### Frontend
+- [ ] Crear pestaña "Inscripción" en FulbitoDetailsScreen
+- [ ] Implementar UI de estados de inscripción
+- [ ] Agregar badges en HomeScreen
+- [ ] Implementar lógica de timing en HomeProvider
+- [ ] Manejar errores y estados de carga
+- [ ] Implementar notificaciones
+
+### Testing
+- [ ] Probar timing automático
+- [ ] Probar casos de capacidad llena
+- [ ] Probar manejo de errores
+- [ ] Probar sincronización
+- [ ] Probar casos edge
+
+## 🎯 PRÓXIMOS PASOS
+
+1. **Implementar APIs** en el backend
+2. **Crear UI** de inscripción
+3. **Implementar lógica** de timing
+4. **Agregar badges** en home
+5. **Testing** completo
+6. **Optimización** y pulido
+
+---
+
+**NOTA**: Este documento debe ser actualizado conforme se implemente la funcionalidad. Mantener sincronizado con el código real.

@@ -1,12 +1,15 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
 import '../providers/auth.dart' as auth_provider;
 import '../providers/profile.dart';
 import '../providers/invitations.dart';
 import '../providers/home.dart';
 import '../models/network.dart';
 import '../widgets/maintenance_modal.dart';
+import '../config/api_config.dart';
 import 'vote_player_screen.dart';
 import 'create_fulbito.dart';
 import 'invite_player.dart';
@@ -310,9 +313,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ...filteredAcceptFulbitos,
               ].map((f) => _FulbitoItem(
                     fulbito: f,
-                    trailing: f.isOwner
-                        ? const _CircleIcon(color: Color(0xFF8B5CF6), icon: Icons.admin_panel_settings)
-                        : const _CircleIcon(color: Color(0xFF3B82F6), icon: Icons.visibility),
+                    trailing: _buildFulbitoTrailing(f),
                   )),
               const SizedBox(height: 80),
             ],
@@ -515,6 +516,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  Widget _buildFulbitoTrailing(Fulbito fulbito) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Icono de vista (siempre presente)
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => FulbitoDetailsScreen(fulbito: fulbito),
+              ),
+            );
+          },
+          child: const _CircleIcon(
+            color: Color(0xFF3B82F6),
+            icon: Icons.visibility,
+          ),
+        ),
+        // Icono de admin (solo si soy el creador)
+        if (fulbito.isOwner) ...[
+          const SizedBox(width: 8),
+          const _CircleIcon(
+            color: Color(0xFF8B5CF6),
+            icon: Icons.admin_panel_settings,
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildAddButton() {
     return GestureDetector(
       onTap: () {
@@ -592,89 +624,124 @@ class _InvitationItem extends StatefulWidget {
 
 class _InvitationItemState extends State<_InvitationItem> {
   bool _isProcessing = false;
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.grey.shade200,
+    return GestureDetector(
+      onTap: () {
+        if (widget.isPending) {
+          setState(() {
+            _isExpanded = !_isExpanded;
+          });
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            clipBehavior: Clip.antiAlias,
-            child: widget.photoUrl != null && widget.photoUrl!.isNotEmpty
-                ? Image.network(widget.photoUrl!, fit: BoxFit.cover)
-                : const Icon(Icons.person, color: Colors.grey),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header básico (siempre visible)
+            Row(
               children: [
-                Text(
-                  widget.username,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.grey.shade200,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: widget.photoUrl != null && widget.photoUrl!.isNotEmpty
+                      ? Image.network(widget.photoUrl!, fit: BoxFit.cover)
+                      : const Icon(Icons.person, color: Colors.grey),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.username,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.phone,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  widget.phone,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF6B7280),
-                  ),
-                ),
-                if (widget.invitationMessage != null && widget.invitationMessage!.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: const Color(0xFFE5E7EB),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      widget.invitationMessage!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF374151),
-                        fontStyle: FontStyle.italic,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+                if (widget.isPending && widget.invitationId != null)
+                  _buildActionButtons()
+                else if (widget.trailing != null)
+                  widget.trailing!,
               ],
             ),
+            
+            // Contenido expandido (solo si está expandido y es una invitación pendiente)
+            if (_isExpanded && widget.isPending && widget.invitationMessage != null && widget.invitationMessage!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildExpandedMessage(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpandedMessage() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Mensaje de invitación:',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF374151),
+            ),
           ),
-          if (widget.isPending && widget.invitationId != null)
-            _buildActionButtons()
-          else if (widget.trailing != null)
-            widget.trailing!,
+          const SizedBox(height: 8),
+          Text(
+            widget.invitationMessage!,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF374151),
+              height: 1.4,
+            ),
+          ),
         ],
       ),
     );
@@ -823,6 +890,7 @@ class _FulbitoItem extends StatefulWidget {
 
 class _FulbitoItemState extends State<_FulbitoItem> {
   bool _isProcessing = false;
+  bool _isExpanded = false;
 
   String _formatDay(String day) {
     switch (day.toLowerCase()) {
@@ -847,14 +915,10 @@ class _FulbitoItemState extends State<_FulbitoItem> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: widget.isPending ? null : () {
-        // Solo navegar si no es una invitación pendiente
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => FulbitoDetailsScreen(fulbito: widget.fulbito),
-          ),
-        );
+      onTap: () {
+        setState(() {
+          _isExpanded = !_isExpanded;
+        });
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -873,98 +937,670 @@ class _FulbitoItemState extends State<_FulbitoItem> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header básico (siempre visible)
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.grey.shade200,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: widget.fulbito.ownerPhotoUrl != null && widget.fulbito.ownerPhotoUrl!.isNotEmpty
+                      ? Image.network(widget.fulbito.ownerPhotoUrl!, fit: BoxFit.cover)
+                      : const Icon(Icons.person, color: Colors.grey),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.fulbito.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${_formatDay(widget.fulbito.day)} ${_formatTime(widget.fulbito.hour)}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (widget.isPending && widget.fulbito.invitationId != null)
+                  _buildFulbitoActionButtons()
+                else if (widget.trailing != null)
+                  widget.trailing!,
+              ],
+            ),
+            
+            // Contenido expandido (solo si está expandido)
+            if (_isExpanded) ...[
+              const SizedBox(height: 16),
+              _buildExpandedContent(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpandedContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Admin/Creador
+        Row(
+          children: [
+            const Icon(Icons.admin_panel_settings, size: 16, color: Color(0xFF8B5CF6)),
+            const SizedBox(width: 4),
+            Text(
+              widget.fulbito.ownerName,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF6B7280),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        
+        // Lugar
+        Row(
+          children: [
+            Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                widget.fulbito.place,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        
+        // Capacidad
+        Row(
+          children: [
+            Icon(Icons.group, size: 16, color: Colors.grey[600]),
+            const SizedBox(width: 4),
+            Text(
+              'Capacidad: ${widget.fulbito.capacity} jugadores',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+        
+        // Estado de inscripción (si está disponible)
+        if (widget.fulbito.registrationStatus != null) ...[
+          const SizedBox(height: 12),
+          _buildRegistrationStatus(),
+        ],
+        
+        // Mensaje de invitación (solo para invitaciones pendientes)
+        if (widget.isPending && widget.fulbito.message != null && widget.fulbito.message!.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFFE5E7EB),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Mensaje de invitación:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF374151),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.fulbito.message!,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF374151),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildRegistrationStatus() {
+    final status = widget.fulbito.registrationStatus!;
+    
+    // Determinar si mostrar el icono de inscripción
+    final bool showRegisterIcon = status.registrationOpen && status.userPosition == null;
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: status.registrationOpen ? const Color(0xFFF0FDF4) : const Color(0xFFFEF3F2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: status.registrationOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.grey.shade200,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: widget.fulbito.ownerPhotoUrl != null && widget.fulbito.ownerPhotoUrl!.isNotEmpty
-                    ? Image.network(widget.fulbito.ownerPhotoUrl!, fit: BoxFit.cover)
-                    : const Icon(Icons.person, color: Colors.grey),
+              Icon(
+                status.registrationOpen ? Icons.check_circle : Icons.schedule,
+                size: 16,
+                color: status.registrationOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.fulbito.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF111827),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      widget.fulbito.ownerName,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
-                  ],
+              const SizedBox(width: 4),
+              Text(
+                status.registrationOpen ? 'Inscripción ABIERTA' : 'Inscripción CERRADA',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: status.registrationOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
                 ),
               ),
-              if (widget.isPending && widget.fulbito.invitationId != null)
-                _buildFulbitoActionButtons()
-              else if (widget.trailing != null)
-                widget.trailing!,
+              // Icono de inscripción (solo si está abierto y no está inscrito)
+              if (showRegisterIcon) ...[
+                const Spacer(),
+                GestureDetector(
+                  onTap: _registerForFulbito,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5CF6),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF8B5CF6).withOpacity(0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.person_add_alt_1,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          
+          // Información de inscripción
           Row(
             children: [
-              Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+              Icon(Icons.people, size: 14, color: Colors.grey[600]),
               const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  widget.fulbito.place,
+              Text(
+                'Inscritos: ${status.registeredCount}/${status.capacity}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+          
+          // Posición del usuario (si está inscrito)
+          if (status.userPosition != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.person, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  'Tu posición: ${status.userPosition}',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          
+          // Próximo partido
+          if (status.nextMatchDate.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.sports_soccer, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  'Próximo: ${status.nextMatchDate} ${status.nextMatchHour}',
+                  style: TextStyle(
+                    fontSize: 12,
                     color: Colors.grey[600],
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
-              const SizedBox(width: 4),
-              Text(
-                '${_formatDay(widget.fulbito.day)} ${_formatTime(widget.fulbito.hour)}',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Icon(Icons.group, size: 16, color: Colors.grey[600]),
-              const SizedBox(width: 4),
-              Text(
-                'Capacidad: ${widget.fulbito.capacity} jugadores',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
-      ),
     );
+  }
+
+  Future<void> _registerForFulbito() async {
+    if (widget.fulbito.registrationStatus == null) return;
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+      if (authProvider.token == null) return;
+
+      // Llamar a la API de inscripción
+      final response = await _callRegistrationAPI(authProvider.token!, widget.fulbito.id);
+      
+      // Debug: imprimir la respuesta
+      print('🔍 API Response: $response');
+      
+      if (mounted) {
+        if (response['success']) {
+          // Mostrar modal de éxito
+          print('✅ Mostrando modal de éxito');
+          _showRegistrationSuccessModal(response['data']);
+          
+          // Recargar datos para actualizar el estado
+          final invitationsProvider = Provider.of<InvitationsProvider>(context, listen: false);
+          invitationsProvider.load(authProvider.token!);
+        } else {
+          // Mostrar modal de error
+          print('❌ Mostrando modal de error');
+          _showRegistrationErrorModal(response['message'] ?? 'Error al inscribirse');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showRegistrationErrorModal('Error: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> _callRegistrationAPI(String token, int fulbitoId) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/auth/fulbito/$fulbitoId/register/');
+    
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    print('🔍 HTTP Status: ${response.statusCode}');
+    print('🔍 Response Body: ${response.body}');
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      // La API devuelve { "status": "success", "message": "...", "data": {...} }
+      if (data['status'] == 'success') {
+        return {
+          'success': true,
+          'data': data['data'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Error al inscribirse',
+        };
+      }
+    } else {
+      final errorData = jsonDecode(response.body);
+      return {
+        'success': false,
+        'message': errorData['message'] ?? 'Error al inscribirse',
+      };
+    }
+  }
+
+  void _showRegistrationErrorModal(String errorMessage) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // No se puede cerrar tocando fuera
+      builder: (BuildContext context) {
+        // Auto-cerrar después de 5 segundos
+        Future.delayed(const Duration(seconds: 5), () {
+          if (mounted && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        });
+        
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          contentPadding: EdgeInsets.zero,
+          content: Container(
+            width: MediaQuery.of(context).size.width * 0.85, // 85% del ancho de pantalla
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8D7DA), // Fondo rojo claro
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFDC3545), width: 3), // Borde rojo
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icono de error
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDC3545),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFDC3545).withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Título de error
+                  Text(
+                    ApiConfig.registrationErrorTitle,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF721C24),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Mensaje de error
+                  Text(
+                    errorMessage,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF721C24),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Botón OK
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFDC3545),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 5,
+                      ),
+                      child: const Text(
+                        'OK',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showRegistrationSuccessModal(Map<String, dynamic> data) {
+    final position = data['position'] ?? 0;
+    final role = data['role'] ?? 'player';
+    final registeredAt = data['registered_at'] ?? '';
+    final isSubstitute = role == 'substitute';
+    
+    // Determinar colores según el rol
+    final backgroundColor = isSubstitute ? const Color(0xFFFFF3CD) : const Color(0xFFD4EDDA);
+    final borderColor = isSubstitute ? const Color(0xFFFFC107) : const Color(0xFF28A745);
+    final iconColor = isSubstitute ? const Color(0xFFFFC107) : const Color(0xFF28A745);
+    final textColor = isSubstitute ? const Color(0xFF856404) : const Color(0xFF155724);
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false, // No se puede cerrar tocando fuera
+      builder: (BuildContext context) {
+        // Auto-cerrar después de 5 segundos
+        Future.delayed(const Duration(seconds: 5), () {
+          if (mounted && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        });
+        
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          contentPadding: EdgeInsets.zero,
+          content: Container(
+            width: MediaQuery.of(context).size.width * 0.85, // 85% del ancho de pantalla
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: borderColor, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icono de éxito más grande
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: iconColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: iconColor.withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      isSubstitute ? Icons.schedule : Icons.check_circle,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Título más grande
+                  Text(
+                    isSubstitute ? ApiConfig.registrationSubstituteTitle : ApiConfig.registrationSuccessTitle,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Mensaje descriptivo
+                  Text(
+                    isSubstitute ? ApiConfig.registrationSubstituteMessage : ApiConfig.registrationSuccessMessage,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: textColor.withOpacity(0.8),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Información de inscripción más grande
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: borderColor.withOpacity(0.3)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        _buildInfoRow('Posición:', '$position'),
+                        const SizedBox(height: 12),
+                        _buildInfoRow('Rol:', isSubstitute ? 'Suplente' : 'Jugador'),
+                        if (registeredAt.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          _buildInfoRow('Hora de inscripción:', _formatDateTime(registeredAt)),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Botón OK más grande
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: iconColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 5,
+                      ),
+                      child: const Text(
+                        'OK',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF374151),
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF6B7280),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDateTime(String dateTime) {
+    try {
+      final DateTime parsed = DateTime.parse(dateTime);
+      final String formatted = '${parsed.day}/${parsed.month}/${parsed.year} ${parsed.hour.toString().padLeft(2, '0')}:${parsed.minute.toString().padLeft(2, '0')}';
+      return formatted;
+    } catch (e) {
+      return dateTime;
+    }
   }
 
   Widget _buildFulbitoActionButtons() {

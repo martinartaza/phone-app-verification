@@ -90,8 +90,12 @@ class InvitationsService {
           ownerPhotoUrl: mapPhoto(e['owner_photo']),
           invitationId: e['invitation_id'],
           capacity: e['capacity'] ?? 10,
+          message: e['message'],
           createdAt: e['created_at'] ?? '',
           updatedAt: e['updated_at'] ?? '',
+          registrationStatus: e['registration_status'] != null 
+              ? RegistrationStatus.fromJson(e['registration_status'] as Map<String, dynamic>)
+              : null,
         );
       }).toList();
     }

@@ -1,0 +1,410 @@
+# ESPECIFICACIONES PARA BACKEND - FUNCIONALIDAD DE INSCRIPCIÓN
+
+## 📋 RESUMEN EJECUTIVO
+Implementar funcionalidad de inscripción automática para fulbitos con timing, capacidad limitada y manejo de suplentes. El sistema debe sincronizar automáticamente con la app móvil sin WebSockets.
+
+## 🎯 OBJETIVOS
+- Permitir inscripción automática cuando se abre el período
+- Manejar capacidad limitada (ej: 10 jugadores)
+- Gestionar suplentes cuando se llena la capacidad
+- Sincronización automática con la app móvil
+- APIs eficientes y escalables
+
+## 🔧 APIS A IMPLEMENTAR
+
+### 1. GET /api/auth/fulbito/{id}/registrations/
+**Descripción**: Obtiene el estado completo de inscripción de un fulbito
+
+**Headers**:
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Response**:
+```json
+{
+  "status": "success",
+  "data": {
+    "fulbito_id": 3,
+    "registration_open": false,
+    "opens_at": "2024-09-21T22:00:00Z",
+    "current_time": "2024-09-19T15:30:00Z",
+    "time_until_open": "2 days, 6 hours, 30 minutes",
+    "capacity": 10,
+    "registered_count": 0,
+    "can_register": false,
+    "players": [
+      {
+        "id": 1,
+        "username": "jugador1",
+        "phone": "+5493812345678",
+        "photo_url": "/media/photo1.jpg",
+        "registered_at": "2024-09-21T22:00:15Z",
+        "position": 1,
+        "averageSkills": {
+          "speed": 75,
+          "passing": 60,
+          "stamina": 80,
+          "shooting": 70,
+          "dribbling": 65,
+          "defending": 55
+        }
+      }
+    ],
+    "spots_available": 10,
+    "is_user_registered": false,
+    "user_position": null
+  }
+}
+```
+
+**Lógica del Backend**:
+- Verificar que el fulbito existe y el usuario tiene acceso
+- Calcular si la inscripción está abierta basado en `registration_start_day` y `registration_start_hour`
+- Obtener lista de jugadores inscritos ordenados por `registered_at`
+- Calcular posición de cada jugador
+- Verificar si el usuario actual ya está inscrito
+- Calcular spots disponibles
+
+### 2. POST /api/auth/fulbito/{id}/register/
+**Descripción**: Permite a un usuario inscribirse en un fulbito
+
+**Headers**:
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{}
+```
+
+**Response Success**:
+```json
+{
+  "status": "success",
+  "data": {
+    "registration_id": 123,
+    "position": 5,
+    "registered_at": "2024-09-21T22:00:15Z",
+    "message": "Inscripción exitosa"
+  }
+}
+```
+
+**Response Error (Capacidad llena)**:
+```json
+{
+  "status": "error",
+  "message": "Capacidad llena. Te has agregado como suplente.",
+  "data": {
+    "registration_id": 124,
+    "position": 11,
+    "registered_at": "2024-09-21T22:00:15Z",
+    "is_substitute": true
+  }
+}
+```
+
+**Lógica del Backend**:
+- Verificar que la inscripción está abierta
+- Verificar que el usuario no está ya inscrito
+- Verificar capacidad del fulbito
+- Si hay espacio: inscribir normalmente
+- Si está lleno: agregar como suplente
+- Registrar timestamp exacto para orden de inscripción
+- Retornar posición asignada
+
+### 3. GET /api/auth/invitation/all/ (ACTUALIZAR)
+**Descripción**: Obtiene todas las invitaciones y fulbitos del usuario
+
+**Headers**:
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Response** (ACTUALIZAR):
+```json
+{
+  "status": "success",
+  "data": {
+    "nearby_fulbito_seconds": 7200,  // NUEVO CAMPO
+    "fulbitos": {
+      "my_fulbitos": [
+        {
+          "id": 3,
+          "name": "Veteranos 47",
+          "place": "Cancha San Jose",
+          "day": "saturday",
+          "hour": "16:00:00",
+          "registration_start_day": "monday",
+          "registration_start_hour": "20:00:00",
+          "capacity": 10,
+          "owner_name": "vikix302",
+          "owner_phone": "+5493812135818",
+          "owner_photo": "/media/user_photos/7/scaled_1000096999.png",
+          "invitation_id": 3,
+          "type": "invite",
+          "message": "puedes venir por favor",
+          "created_at": "2025-09-16T15:29:39.448543Z",
+          "updated_at": "2025-09-18T21:49:54.436656Z",
+          "registration_status": {  // NUEVOS CAMPOS
+            "is_open": false,
+            "opens_at": "2024-09-21T22:00:00Z",
+            "registered_count": 3,
+            "capacity": 10,
+            "can_register": false,
+            "is_user_registered": false,
+            "user_position": null
+          }
+        }
+      ],
+      "pending_fulbitos": []
+    },
+    "network_users": {
+      "my_network": [],
+      "pending_invitations": []
+    }
+  }
+}
+```
+
+**Lógica del Backend**:
+- Calcular `nearby_fulbito_seconds` como el menor tiempo hasta la próxima apertura de inscripción
+- Para cada fulbito, calcular `registration_status`:
+  - `is_open`: si `registration_start_day` y `registration_start_hour` ya pasaron
+  - `opens_at`: timestamp de cuando se abre la inscripción
+  - `registered_count`: cantidad de jugadores inscritos
+  - `can_register`: si está abierto y el usuario no está inscrito
+  - `is_user_registered`: si el usuario ya está inscrito
+  - `user_position`: posición del usuario si está inscrito
+
+## 🗄️ MODELOS DE BASE DE DATOS
+
+### Tabla: fulbito_registrations
+```sql
+CREATE TABLE fulbito_registrations (
+    id SERIAL PRIMARY KEY,
+    fulbito_id INTEGER NOT NULL REFERENCES fulbitos(id),
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    registered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    position INTEGER NOT NULL,
+    is_substitute BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(fulbito_id, user_id)
+);
+
+CREATE INDEX idx_fulbito_registrations_fulbito_id ON fulbito_registrations(fulbito_id);
+CREATE INDEX idx_fulbito_registrations_user_id ON fulbito_registrations(user_id);
+CREATE INDEX idx_fulbito_registrations_registered_at ON fulbito_registrations(registered_at);
+```
+
+### Tabla: fulbitos (ACTUALIZAR)
+```sql
+-- Agregar campos si no existen
+ALTER TABLE fulbitos ADD COLUMN IF NOT EXISTS capacity INTEGER DEFAULT 10;
+ALTER TABLE fulbitos ADD COLUMN IF NOT EXISTS registration_start_day VARCHAR(20);
+ALTER TABLE fulbitos ADD COLUMN IF NOT EXISTS registration_start_hour TIME;
+```
+
+## ⚙️ LÓGICA DE NEGOCIO
+
+### 1. Cálculo de Timing
+```python
+def calculate_registration_status(fulbito):
+    now = datetime.now()
+    registration_start = get_registration_start_datetime(fulbito)
+    
+    is_open = now >= registration_start
+    opens_at = registration_start.isoformat()
+    time_until_open = registration_start - now
+    
+    return {
+        'is_open': is_open,
+        'opens_at': opens_at,
+        'time_until_open': str(time_until_open)
+    }
+```
+
+### 2. Manejo de Capacidad
+```python
+def register_user_for_fulbito(fulbito_id, user_id):
+    fulbito = get_fulbito(fulbito_id)
+    current_registrations = get_registration_count(fulbito_id)
+    
+    if current_registrations < fulbito.capacity:
+        # Inscribir normalmente
+        position = current_registrations + 1
+        is_substitute = False
+    else:
+        # Agregar como suplente
+        position = current_registrations + 1
+        is_substitute = True
+    
+    create_registration(fulbito_id, user_id, position, is_substitute)
+    return position, is_substitute
+```
+
+### 3. Cálculo de nearby_fulbito_seconds
+```python
+def calculate_nearby_fulbito_seconds(user_fulbitos):
+    min_seconds = float('inf')
+    
+    for fulbito in user_fulbitos:
+        registration_start = get_registration_start_datetime(fulbito)
+        now = datetime.now()
+        
+        if registration_start > now:
+            seconds_until = (registration_start - now).total_seconds()
+            min_seconds = min(min_seconds, seconds_until)
+    
+    return int(min_seconds) if min_seconds != float('inf') else None
+```
+
+## 🔒 VALIDACIONES Y SEGURIDAD
+
+### 1. Validaciones de Inscripción
+- [ ] Usuario autenticado
+- [ ] Fulbito existe y está activo
+- [ ] Usuario tiene acceso al fulbito (invitado o admin)
+- [ ] Inscripción está abierta
+- [ ] Usuario no está ya inscrito
+- [ ] Fulbito no está cancelado
+
+### 2. Validaciones de Timing
+- [ ] Verificar que `registration_start_day` y `registration_start_hour` son válidos
+- [ ] Manejar zonas horarias correctamente
+- [ ] Validar que la inscripción no se abre en el pasado
+
+### 3. Validaciones de Capacidad
+- [ ] Verificar que `capacity` es un número positivo
+- [ ] Manejar casos de capacidad 0
+- [ ] Validar que no se exceda la capacidad
+
+## 📊 CASOS DE USO
+
+### Caso 1: Inscripción Normal
+1. Usuario hace POST a `/api/auth/fulbito/{id}/register/`
+2. Sistema verifica que inscripción está abierta
+3. Sistema verifica que hay capacidad
+4. Sistema inscribe al usuario
+5. Sistema retorna posición y timestamp
+
+### Caso 2: Capacidad Llena
+1. Usuario hace POST a `/api/auth/fulbito/{id}/register/`
+2. Sistema verifica que inscripción está abierta
+3. Sistema verifica que NO hay capacidad
+4. Sistema agrega como suplente
+5. Sistema retorna posición y flag de suplente
+
+### Caso 3: Usuario Ya Inscrito
+1. Usuario hace POST a `/api/auth/fulbito/{id}/register/`
+2. Sistema verifica que usuario ya está inscrito
+3. Sistema retorna error con mensaje apropiado
+
+### Caso 4: Inscripción Cerrada
+1. Usuario hace POST a `/api/auth/fulbito/{id}/register/`
+2. Sistema verifica que inscripción está cerrada
+3. Sistema retorna error con mensaje apropiado
+
+## 🚨 MANEJO DE ERRORES
+
+### Errores Comunes
+```json
+// Inscripción cerrada
+{
+  "status": "error",
+  "message": "La inscripción está cerrada",
+  "code": "REGISTRATION_CLOSED"
+}
+
+// Usuario ya inscrito
+{
+  "status": "error",
+  "message": "Ya estás inscrito en este fulbito",
+  "code": "ALREADY_REGISTERED"
+}
+
+// Fulbito no encontrado
+{
+  "status": "error",
+  "message": "Fulbito no encontrado",
+  "code": "FULBITO_NOT_FOUND"
+}
+
+// Sin acceso al fulbito
+{
+  "status": "error",
+  "message": "No tienes acceso a este fulbito",
+  "code": "ACCESS_DENIED"
+}
+```
+
+## 📈 OPTIMIZACIONES
+
+### 1. Índices de Base de Datos
+- Índice en `fulbito_registrations(fulbito_id, registered_at)` para ordenamiento
+- Índice en `fulbito_registrations(user_id)` para búsquedas del usuario
+- Índice en `fulbitos(registration_start_day, registration_start_hour)` para timing
+
+### 2. Caché
+- Cachear `nearby_fulbito_seconds` por 30 segundos
+- Cachear estado de inscripción por 10 segundos
+- Invalidar cache cuando se hace una inscripción
+
+### 3. Concurrencia
+- Usar transacciones para inscripciones
+- Implementar lock optimista para evitar doble inscripción
+- Manejar race conditions en capacidad
+
+## 🧪 TESTING
+
+### Tests Unitarios
+- [ ] Cálculo de timing correcto
+- [ ] Manejo de capacidad
+- [ ] Validaciones de acceso
+- [ ] Cálculo de posiciones
+
+### Tests de Integración
+- [ ] Flujo completo de inscripción
+- [ ] Manejo de errores
+- [ ] Sincronización de timing
+- [ ] Casos de concurrencia
+
+### Tests de Performance
+- [ ] Tiempo de respuesta de APIs
+- [ ] Manejo de múltiples usuarios
+- [ ] Escalabilidad de base de datos
+
+## 📋 CHECKLIST DE IMPLEMENTACIÓN
+
+### Backend
+- [ ] Crear tabla `fulbito_registrations`
+- [ ] Agregar campos a tabla `fulbitos`
+- [ ] Implementar API GET `/api/auth/fulbito/{id}/registrations/`
+- [ ] Implementar API POST `/api/auth/fulbito/{id}/register/`
+- [ ] Actualizar API GET `/api/auth/invitation/all/`
+- [ ] Implementar lógica de timing
+- [ ] Implementar manejo de capacidad
+- [ ] Agregar validaciones y seguridad
+- [ ] Implementar manejo de errores
+- [ ] Agregar índices de base de datos
+- [ ] Implementar caché
+- [ ] Escribir tests
+- [ ] Documentar APIs
+
+### Consideraciones Adicionales
+- [ ] Manejo de zonas horarias
+- [ ] Logging de inscripciones
+- [ ] Métricas de performance
+- [ ] Monitoreo de errores
+- [ ] Backup de datos
+- [ ] Escalabilidad horizontal
+
+---
+
+**NOTA**: Este documento debe ser actualizado conforme se implemente la funcionalidad. Mantener sincronizado con el código real.

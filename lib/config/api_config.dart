@@ -69,4 +69,12 @@ class ApiConfig {
   static const String maintenanceMessage = 'Estamos actualizando la aplicación para mejorar tu experiencia. Por favor, intenta nuevamente en unos minutos.';
   static const String retryButtonText = 'Reintentar';
   static const String laterButtonText = 'Más tarde';
+  
+  // Registration messages configuration
+  static const String registrationSuccessTitle = '¡Inscripción Exitosa!';
+  static const String registrationSuccessMessage = 'Te has inscrito correctamente en el fulbito.';
+  static const String registrationSubstituteTitle = '¡Te inscribiste como Suplente!';
+  static const String registrationSubstituteMessage = 'El fulbito está completo, pero te agregamos como suplente.';
+  static const String registrationErrorTitle = 'Error en la Inscripción';
+  static const String registrationErrorMessage = 'No se pudo completar la inscripción. Intenta nuevamente.';
 }

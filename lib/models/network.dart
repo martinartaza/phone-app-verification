@@ -16,6 +16,59 @@ class NetworkUser {
   });
 }
 
+class RegistrationStatus {
+  final int fulbitoId;
+  final bool registrationOpen;
+  final String opensAt;
+  final String currentTime;
+  final int timeUntilOpen;
+  final String nextMatchDate;
+  final String nextMatchHour;
+  final int capacity;
+  final int registeredCount;
+  final int availableSpots;
+  final bool canRegister;
+  final List<Map<String, dynamic>> players;
+  final int? userPosition;
+  final String? userType;
+
+  RegistrationStatus({
+    required this.fulbitoId,
+    required this.registrationOpen,
+    required this.opensAt,
+    required this.currentTime,
+    required this.timeUntilOpen,
+    required this.nextMatchDate,
+    required this.nextMatchHour,
+    required this.capacity,
+    required this.registeredCount,
+    required this.availableSpots,
+    required this.canRegister,
+    required this.players,
+    this.userPosition,
+    this.userType,
+  });
+
+  factory RegistrationStatus.fromJson(Map<String, dynamic> json) {
+    return RegistrationStatus(
+      fulbitoId: json['fulbito_id'] ?? 0,
+      registrationOpen: json['registration_open'] ?? false,
+      opensAt: json['opens_at'] ?? '',
+      currentTime: json['current_time'] ?? '',
+      timeUntilOpen: json['time_until_open'] ?? 0,
+      nextMatchDate: json['next_match_date'] ?? '',
+      nextMatchHour: json['next_match_hour'] ?? '',
+      capacity: json['capacity'] ?? 0,
+      registeredCount: json['registered_count'] ?? 0,
+      availableSpots: json['available_spots'] ?? 0,
+      canRegister: json['can_register'] ?? false,
+      players: (json['players'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [],
+      userPosition: json['user_position'],
+      userType: json['user_type'],
+    );
+  }
+}
+
 class NetworkData {
   final List<NetworkUser> network;
   final List<NetworkUser> invitationPending;
@@ -39,8 +92,10 @@ class Fulbito {
   final String? ownerPhotoUrl; // full URL
   final int? invitationId;
   final int capacity;
+  final String? message;
   final String createdAt;
   final String updatedAt;
+  final RegistrationStatus? registrationStatus;
 
   Fulbito({
     required this.id,
@@ -55,8 +110,10 @@ class Fulbito {
     required this.ownerPhotoUrl,
     required this.invitationId,
     required this.capacity,
+    this.message,
     required this.createdAt,
     required this.updatedAt,
+    this.registrationStatus,
   });
 
   bool get isOwner => invitationId == null;
