@@ -1,0 +1,230 @@
+Resumen de APIs Implementadas - Proyecto Fulbito
+🔍 API 1: GET /api/auth/fulbito/{id}/registrations/ header Authorization: Bearer {token}
+
+Respuesta exitosa:
+{
+  "status": "success",
+  "data": {
+    "fulbito_id": 3,
+    "registration_open": true,
+    "opens_at": "2024-09-21T22:00:00Z",
+    "current_time": "2024-09-19T21:30:00Z",
+    "time_until_open": 0,
+    "next_match_date": "2025-09-25",
+    "next_match_hour": "20:00:00",
+    "capacity": 10,
+    "registered_count": 9,
+    "available_spots": 1,
+    "can_register": true,
+    "players": [
+      {
+        "id": 1,
+        "username": "jugador1",
+        "phone": "+5493812345678",
+        "photo_url": "/media/photo1.jpg",
+        "registered_at": "2024-09-21T22:00:15Z",
+        "position": 1,
+        "type": "player",
+        "averageSkills": {
+          "speed": 75,
+          "passing": 60,
+          "stamina": 80,
+          "shooting": 70,
+          "dribbling": 65,
+          "defending": 55
+        }
+      }
+    ],
+    "user_position": null,
+    "user_type": null
+  }
+}
+
+
+Casos de uso:
+Antes de inscripción: Muestra countdown y detalles del fulbito
+Durante inscripción: Muestra jugadores inscriptos y si el usuario puede inscribirse
+Después de inscripción: Muestra posición y rol del usuario
+
+
+POST /api/auth/fulbito/{id}/register/ header Authorization: Bearer {token}
+
+Respuesta exitosa:
+{
+  "status": "success",
+  "message": "Successfully registered as player",
+  "data": {
+    "position": 1,
+    "role": "player",
+    "match_date": "2025-09-21",
+    "fulbito_id": 3,
+    "registered_players": [
+      {
+        "id": 1,
+        "username": "jugador1",
+        "phone": "+5493812345678",
+        "photo_url": "/media/photo1.jpg",
+        "registered_at": "2024-09-21T22:00:15Z",
+        "position": 1,
+        "type": "player",
+        "averageSkills": {
+          "speed": 75,
+          "passing": 60,
+          "stamina": 80,
+          "shooting": 70,
+          "dribbling": 65,
+          "defending": 55
+        }
+      }
+    ],
+    "total_registrations": 1,
+    "players_count": 1,
+    "substitutes_count": 0,
+    "capacity": 10,
+    "available_spots": 9
+  }
+}
+
+Lógica de inscripción:
+Players (1-10): Si hay cupo disponible → role: 'player'
+Substitutes (1+): Si no hay cupo → role: 'substitute'
+Orden automático: Players van del 1-10, substitutes empiezan en 1
+
+Códigos de Error Comunes:
+403 Forbidden:
+{
+  "status": "error",
+  "message": "You do not have permission to access this fulbito"
+}
+
+404 Not Found:
+{
+  "status": "error",
+  "message": "Fulbito not found"
+}
+
+400 Bad Request (inscripción cerrada):
+{
+  "status": "error",
+  "message": "Registration is not open yet",
+  "opens_at": "2024-09-21T22:00:00Z",
+  "time_until_open": 1800
+}
+
+
+400 Bad Request (ya inscripto):
+{
+  "status": "error",
+  "message": "You are already registered for this match",
+  "position": 3,
+  "role": "player"
+}
+
+Flujo de Usuario Recomendado:
+Consultar estado: GET /registrations/ para ver si puede inscribirse
+Verificar timing: Revisar registration_open y time_until_open
+Inscribirse: POST /register/ si can_register: true
+Ver confirmación: La respuesta incluye toda la información actualizada
+
+Manejo de Zona Horaria:
+Todas las fechas/horas: UTC-3 (Argentina)
+Timestamps: Formato ISO 8601
+Countdown: Segundos restantes hasta apertura de inscripción
+
+
+
+Modificacino de la api GET api/auth/invitation/all/ ahora cada fulbito tiene un campo llamado registration_status y adentro suyo lo que la api /api/auth/fulbito/{id}/registrations/ devuelve, por ejemplo ahora la api get all devuelve
+
+{
+    "status": "success",
+    "data": {
+        "network": { ... },
+        "fulbitos": {
+            "my_fulbitos": [
+                {
+                    "id": 13,
+                    "name": "trasnoche",
+                    .....
+                    "registration_status": {
+                        "fulbito_id": 13,
+                        "registration_open": true,
+                        "opens_at": "2025-09-15T20:00:00-03:00",
+                        "current_time": "2025-09-19T18:09:46.718506-03:00",
+                        "time_until_open": 0,
+                        "next_match_date": "2025-09-20",
+                        "next_match_hour": "18:00:00",
+                        "capacity": 10,
+                        "registered_count": 0,
+                        "available_spots": 10,
+                        "can_register": true,
+                        "players": [],
+                        "user_position": null,
+                        "user_type": null
+                    },
+                },
+                {
+                    "id": 4,
+                    ....
+                    "registration_status": {
+                        "fulbito_id": 4,
+                        "registration_open": true,
+                        "opens_at": "2025-09-18T20:00:00-03:00",
+                        "current_time": "2025-09-19T18:09:46.731117-03:00",
+                        "time_until_open": 0,
+                        "next_match_date": "2025-09-20",
+                        "next_match_hour": "19:00:00",
+                        "capacity": 10,
+                        "registered_count": 1,
+                        "available_spots": 9,
+                        "can_register": false,
+                        "players": [
+                            {
+                                "id": 4,
+                                "username": "sebastian artaza",
+                                "phone": "+5493814437003",
+                                "photo_url": "/media/user_photos/5/scaled_60f1aa64-f701-4755-8dc0-f68f65935fe67505323485016247091.jpg",
+                                "registered_at": "2025-09-19T20:52:55.124644+00:00",
+                                "position": 1,
+                                "type": "player",
+                                "averageSkills": {
+                                    "speed": 75,
+                                    "passing": 30,
+                                    "stamina": 10,
+                                    "shooting": 60,
+                                    "defending": 20,
+                                    "dribbling": 45
+                                }
+                            }
+                        ],
+                        "user_position": 1,
+                        "user_type": "player"
+                    },
+                    "created_at": "2025-09-16T20:54:14.154246Z",
+                    "updated_at": "2025-09-16T20:54:14.154276Z"
+                }
+            ],
+            "my_fulbitos_total": 3,
+            "accept_fulbitos": [
+                {
+                    "id": 2,
+                    "name": "Veteranos 40",
+                    ....
+                    "registration_status": {
+                        "fulbito_id": 2,
+                        ....
+                        "players": [],
+                    },
+                }
+            ],
+            "accept_fulbitos_total": 1,
+            "pending_fulbitos": [ {}, {}, {} ]
+            "pending_fulbitos_total": 1
+        },
+        "pending": {
+            "total": 2,
+            "network": 1,
+            "fulbito": 1
+        }
+    }
+}
+

@@ -5,6 +5,7 @@ import '../../models/player.dart';
 import '../../widgets/fulbito/fulbito_form_widget.dart';
 import '../../widgets/dual_hexagon_chart.dart';
 import '../../providers/fulbito/fulbito_provider.dart';
+import '../../providers/fulbito/fulbito_inscription_provider.dart';
 import '../../providers/auth.dart' as auth_provider;
 import '../../config/api_config.dart';
 
@@ -26,12 +27,11 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
   @override
   void initState() {
     super.initState();
-    // Si es admin, tiene 3 tabs, sino 2
-    final isAdmin = widget.fulbito.isOwner;
-    _tabController = TabController(length: isAdmin ? 3 : 2, vsync: this);
+    // Siempre 3 tabs: Modificación (solo admin), Detalles, Inscripción
+    _tabController = TabController(length: 3, vsync: this);
     
-    // Siempre empezar en el tab "Detalles" (índice 1 para admin, índice 0 para invitado)
-    _tabController.index = isAdmin ? 1 : 0;
+    // Empezar en el tab "Detalles" (índice 1)
+    _tabController.index = 1;
     
     // Cargar datos del fulbito
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -78,30 +78,20 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
           indicatorColor: const Color(0xFF8B5CF6),
           labelColor: const Color(0xFF8B5CF6),
           unselectedLabelColor: Colors.grey,
-          tabs: widget.fulbito.isOwner
-              ? const [
-                  Tab(text: 'Modificación'),
-                  Tab(text: 'Detalles'),
-                  Tab(text: 'Inscribirse'),
-                ]
-              : const [
-                  Tab(text: 'Detalles'),
-                  Tab(text: 'Inscribirse'),
-                ],
+          tabs: [
+            if (widget.fulbito.isOwner) const Tab(text: 'Modificación'),
+            const Tab(text: 'Detalles'),
+            Tab(text: _getInscriptionTabText()),
+          ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: widget.fulbito.isOwner
-            ? [
-                _buildModificationTab(),
-                _buildDetailsTab(),
-                _buildInscriptionTab(),
-              ]
-            : [
-                _buildDetailsTab(),
-                _buildInscriptionTab(),
-              ],
+        children: [
+          if (widget.fulbito.isOwner) _buildModificationTab(),
+          _buildDetailsTab(),
+          _buildInscriptionTab(),
+        ],
       ),
     );
   }
@@ -299,17 +289,526 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
     );
   }
 
+  String _getInscriptionTabText() {
+    if (widget.fulbito.registrationStatus == null) {
+      return 'Inscribirse';
+    }
+    
+    final status = widget.fulbito.registrationStatus!;
+    if (status.nextMatchDate.isNotEmpty) {
+      // Formatear la fecha para mostrar solo DD/MM
+      try {
+        final date = DateTime.parse(status.nextMatchDate);
+        return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
+      } catch (e) {
+        return status.nextMatchDate;
+      }
+    }
+    
+    return 'Inscribirse';
+  }
+
   Widget _buildInscriptionTab() {
-    return const Center(
-      child: Text(
-        'Pestaña Inscribirse\n(Contenido próximamente)',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 18,
-          color: Color(0xFF6B7280),
+    if (widget.fulbito.registrationStatus == null) {
+      return const Center(
+        child: Text(
+          'No hay información de inscripción disponible',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 18,
+            color: Color(0xFF6B7280),
+          ),
         ),
+      );
+    }
+
+    final status = widget.fulbito.registrationStatus!;
+    final isRegistrationOpen = status.registrationOpen;
+    final isUserRegistered = status.userPosition != null;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Estado de inscripción
+          _buildInscriptionStatusCard(status, isRegistrationOpen, isUserRegistered),
+          
+          const SizedBox(height: 24),
+          
+          // Contenido según el estado
+          if (!isRegistrationOpen) ...[
+            _buildRegistrationClosedContent(status),
+          ] else if (isUserRegistered) ...[
+            _buildUserRegisteredContent(status),
+          ] else ...[
+            _buildRegistrationOpenContent(status),
+          ],
+        ],
       ),
     );
+  }
+
+  Widget _buildInscriptionStatusCard(RegistrationStatus status, bool isOpen, bool isRegistered) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isOpen ? const Color(0xFFF0FDF4) : const Color(0xFFFEF3F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isOpen ? Icons.check_circle : Icons.schedule,
+                color: isOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                isOpen ? 'Inscripción ABIERTA' : 'Inscripción CERRADA',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Próximo partido: ${status.nextMatchDate} ${status.nextMatchHour}',
+            style: const TextStyle(
+              fontSize: 16,
+              color: Color(0xFF374151),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Inscritos: ${status.registeredCount}/${status.capacity}',
+            style: const TextStyle(
+              fontSize: 16,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          if (isRegistered) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Tu posición: ${status.userPosition}',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF8B5CF6),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegistrationClosedContent(RegistrationStatus status) {
+    return Consumer<FulbitoInscriptionProvider>(
+      builder: (context, inscriptionProvider, child) {
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            children: [
+              const Icon(
+                Icons.schedule,
+                size: 48,
+                color: Color(0xFF6B7280),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'La inscripción se inicia en:',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF374151),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                inscriptionProvider.formatRegistrationStartTime(status.opensAt),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF8B5CF6),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRegistrationOpenContent(RegistrationStatus status) {
+    return Column(
+      children: [
+        // Botón de inscripción
+        Consumer<FulbitoInscriptionProvider>(
+          builder: (context, inscriptionProvider, child) {
+            return SizedBox(
+              width: double.infinity,
+              height: 60,
+              child: ElevatedButton(
+                onPressed: inscriptionProvider.isLoading 
+                    ? null 
+                    : () => inscriptionProvider.registerForFulbito(context, widget.fulbito.id),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8B5CF6),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 5,
+                ),
+                child: inscriptionProvider.isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        'INSCRIBIRSE',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            );
+          },
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Hexágono de habilidades
+        _buildSkillsHexagon(status),
+        
+        // Botón para limpiar selección si hay jugador seleccionado
+        Consumer<FulbitoInscriptionProvider>(
+          builder: (context, inscriptionProvider, child) {
+            if (inscriptionProvider.selectedPlayer == null) return const SizedBox.shrink();
+            
+            return Column(
+              children: [
+                const SizedBox(height: 16),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () {
+                      inscriptionProvider.clearSelection();
+                    },
+                    icon: const Icon(Icons.clear, size: 18),
+                    label: const Text('Ver promedio de todos'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF8B5CF6),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Lista de jugadores inscritos
+        _buildRegisteredPlayersList(status),
+      ],
+    );
+  }
+
+  Widget _buildUserRegisteredContent(RegistrationStatus status) {
+    return Column(
+      children: [
+        // Botón de cancelar inscripción
+        Consumer<FulbitoInscriptionProvider>(
+          builder: (context, inscriptionProvider, child) {
+            return SizedBox(
+              width: double.infinity,
+              height: 60,
+              child: ElevatedButton(
+                onPressed: inscriptionProvider.isLoading 
+                    ? null 
+                    : () => inscriptionProvider.showCancelRegistrationDialog(
+                        context, 
+                        () => inscriptionProvider.cancelRegistration(context, widget.fulbito.id)
+                      ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEF4444),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 5,
+                ),
+                child: inscriptionProvider.isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        'CANCELAR INSCRIPCIÓN',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            );
+          },
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Hexágono de habilidades
+        _buildSkillsHexagon(status),
+        
+        // Botón para limpiar selección si hay jugador seleccionado
+        Consumer<FulbitoInscriptionProvider>(
+          builder: (context, inscriptionProvider, child) {
+            if (inscriptionProvider.selectedPlayer == null) return const SizedBox.shrink();
+            
+            return Column(
+              children: [
+                const SizedBox(height: 16),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () {
+                      inscriptionProvider.clearSelection();
+                    },
+                    icon: const Icon(Icons.clear, size: 18),
+                    label: const Text('Ver promedio de todos'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF8B5CF6),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Lista de jugadores inscritos
+        _buildRegisteredPlayersList(status),
+      ],
+    );
+  }
+
+  Widget _buildSkillsHexagon(RegistrationStatus status) {
+    return Consumer<FulbitoInscriptionProvider>(
+      builder: (context, inscriptionProvider, child) {
+        final skills = inscriptionProvider.selectedPlayer != null
+            ? inscriptionProvider.getSelectedPlayerSkills()
+            : inscriptionProvider.convertSkillsToMap(status.players);
+        
+        final title = inscriptionProvider.getHexagonTitle();
+        
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF374151),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: DualHexagonChart(
+                  selfPerceptionSkills: skills,
+                  averageOpinionSkills: skills,
+                  numberOfOpinions: inscriptionProvider.selectedPlayer != null ? 1 : status.players.length,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRegisteredPlayersList(RegistrationStatus status) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Jugadores Inscritos (${status.registeredCount})',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF374151),
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (status.players.isEmpty)
+            const Text(
+              'No hay jugadores inscritos aún',
+              style: TextStyle(
+                fontSize: 16,
+                color: Color(0xFF6B7280),
+              ),
+            )
+          else
+            ...status.players.map((player) => _buildRegisteredPlayerItem(player)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegisteredPlayerItem(Map<String, dynamic> player) {
+    return Consumer<FulbitoInscriptionProvider>(
+      builder: (context, inscriptionProvider, child) {
+        final position = player['position'] ?? 0;
+        final username = player['username'] ?? '';
+        final photoUrl = player['photo_url'] ?? '';
+        final registeredAt = player['registered_at'] ?? '';
+        final isSelected = inscriptionProvider.selectedPlayer?['id'] == player['id'];
+
+        return GestureDetector(
+          onTap: () {
+            inscriptionProvider.selectPlayer(isSelected ? null : player);
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFFF3E8FF) : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected ? const Color(0xFF8B5CF6) : const Color(0xFFE2E8F0),
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                // Posición
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFF8B5CF6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$position',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                
+                // Foto
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.grey.shade200,
+                    border: isSelected ? Border.all(color: const Color(0xFF8B5CF6), width: 2) : null,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: photoUrl.isNotEmpty
+                      ? Image.network(
+                          '${ApiConfig.baseUrl}$photoUrl',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(Icons.person, color: Colors.grey);
+                          },
+                        )
+                      : const Icon(Icons.person, color: Colors.grey),
+                ),
+                const SizedBox(width: 12),
+                
+                // Nombre
+                Expanded(
+                  child: Text(
+                    username,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFF374151),
+                    ),
+                  ),
+                ),
+                
+                // Hora de inscripción
+                if (registeredAt.isNotEmpty)
+                  Text(
+                    inscriptionProvider.formatTime(registeredAt),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFF6B7280),
+                    ),
+                  ),
+                
+                // Icono de selección
+                if (isSelected) ...[
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.check_circle,
+                    color: Color(0xFF8B5CF6),
+                    size: 20,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
+  String _formatTime(String time) {
+    if (time.length > 5) {
+      return time.substring(0, 5); // HH:MM
+    }
+    return time;
   }
 
   Widget _buildDetailRow(String label, String value) {
@@ -472,10 +971,4 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
     }
   }
 
-  String _formatTime(String time) {
-    if (time.length > 5) {
-      return time.substring(0, 5); // HH:MM
-    }
-    return time;
-  }
 }
