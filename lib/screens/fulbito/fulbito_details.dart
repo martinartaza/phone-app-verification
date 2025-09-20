@@ -8,6 +8,7 @@ import '../../providers/fulbito/fulbito_provider.dart';
 import '../../providers/fulbito/fulbito_inscription_provider.dart';
 import '../../providers/auth.dart' as auth_provider;
 import '../../config/api_config.dart';
+import '../teams.dart';
 
 class FulbitoDetailsScreen extends StatefulWidget {
   final Fulbito fulbito;
@@ -500,33 +501,8 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
         
         const SizedBox(height: 24),
         
-        // Hexágono de habilidades
-        _buildSkillsHexagon(status),
-        
-        // Botón para limpiar selección si hay jugador seleccionado
-        Consumer<FulbitoInscriptionProvider>(
-          builder: (context, inscriptionProvider, child) {
-            if (inscriptionProvider.selectedPlayer == null) return const SizedBox.shrink();
-            
-            return Column(
-              children: [
-                const SizedBox(height: 16),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () {
-                      inscriptionProvider.clearSelection();
-                    },
-                    icon: const Icon(Icons.clear, size: 18),
-                    label: const Text('Ver promedio de todos'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF8B5CF6),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
+        // Botón Armar Equipos
+        _buildCreateTeamsButton(),
         
         const SizedBox(height: 24),
         
@@ -576,33 +552,8 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
         
         const SizedBox(height: 24),
         
-        // Hexágono de habilidades
-        _buildSkillsHexagon(status),
-        
-        // Botón para limpiar selección si hay jugador seleccionado
-        Consumer<FulbitoInscriptionProvider>(
-          builder: (context, inscriptionProvider, child) {
-            if (inscriptionProvider.selectedPlayer == null) return const SizedBox.shrink();
-            
-            return Column(
-              children: [
-                const SizedBox(height: 16),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () {
-                      inscriptionProvider.clearSelection();
-                    },
-                    icon: const Icon(Icons.clear, size: 18),
-                    label: const Text('Ver promedio de todos'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF8B5CF6),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
+        // Botón Armar Equipos
+        _buildCreateTeamsButton(),
         
         const SizedBox(height: 24),
         
@@ -612,50 +563,54 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
     );
   }
 
-  Widget _buildSkillsHexagon(RegistrationStatus status) {
-    return Consumer2<FulbitoInscriptionProvider, FulbitoProvider>(
-      builder: (context, inscriptionProvider, fulbitoProvider, child) {
-        final skills = inscriptionProvider.selectedPlayer != null
-            ? inscriptionProvider.getSelectedPlayerSkills()
-            : inscriptionProvider.convertSkillsToMap(fulbitoProvider.players.map((p) => {
-              'averageSkills': p.averageSkills,
-            }).toList());
+  Widget _buildCreateTeamsButton() {
+    return Consumer<FulbitoProvider>(
+      builder: (context, fulbitoProvider, child) {
+        final fulbito = fulbitoProvider.currentFulbito ?? widget.fulbito;
+        final registeredPlayers = fulbito.registrationStatus?.players ?? [];
         
-        final title = inscriptionProvider.getHexagonTitle();
-        
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
+        return SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            onPressed: registeredPlayers.isEmpty 
+                ? null 
+                : () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TeamsScreen(
+                          registeredPlayers: registeredPlayers,
+                        ),
+                      ),
+                    );
+                  },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: registeredPlayers.isEmpty 
+                  ? Colors.grey 
+                  : const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF374151),
+              elevation: 3,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.group, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  registeredPlayers.isEmpty 
+                      ? 'NO HAY JUGADORES'
+                      : 'ARMAR EQUIPOS',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: DualHexagonChart(
-                  selfPerceptionSkills: skills,
-                  averageOpinionSkills: skills,
-                  numberOfOpinions: inscriptionProvider.selectedPlayer != null ? 1 : status.players.length,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

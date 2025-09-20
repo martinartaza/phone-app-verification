@@ -14,7 +14,9 @@ import 'providers/fulbito/invite_players_provider.dart';
 import 'providers/fulbito/fulbito_inscription_provider.dart';
 import 'providers/vote.dart';
 import 'providers/registration.dart';
+import 'providers/teams.dart';
 import 'screens/fulbito/invite_players.dart';
+import 'screens/teams.dart';
 
 void main() {
   runApp(const MatchDayApp());
@@ -38,6 +40,7 @@ class MatchDayApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FulbitoInscriptionProvider()),
         ChangeNotifierProvider(create: (_) => VoteProvider()),
         ChangeNotifierProvider(create: (_) => RegistrationProvider()),
+        ChangeNotifierProvider(create: (_) => TeamsProvider()),
       ],
       child: MaterialApp(
         title: 'MatchDay',
@@ -52,6 +55,7 @@ class MatchDayApp extends StatelessWidget {
           '/profile': (context) => const ProfileScreen(),
           '/home': (context) => const HomeScreen(),
           '/fulbito/invite-players': (context) => const InvitePlayersScreen(),
+          '/teams': (context) => const TeamsScreen(registeredPlayers: []),
         },
         debugShowCheckedModeBanner: false,
       ),
