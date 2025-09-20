@@ -5,6 +5,10 @@ class TeamsProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _team1 = [];
   List<Map<String, dynamic>> _team2 = [];
   List<Map<String, dynamic>> _unassignedPlayers = [];
+  
+  // Promedios de skills por equipo
+  Map<String, double> _team1AverageSkills = {};
+  Map<String, double> _team2AverageSkills = {};
 
   // Getters
   List<Map<String, dynamic>> get players => _players;
@@ -15,18 +19,33 @@ class TeamsProvider extends ChangeNotifier {
   int get team1Count => _team1.length;
   int get team2Count => _team2.length;
   int get unassignedCount => _unassignedPlayers.length;
+  
+  // Getters para promedios de skills
+  Map<String, double> get team1AverageSkills => _team1AverageSkills;
+  Map<String, double> get team2AverageSkills => _team2AverageSkills;
+  
+  // Verificar si hay datos suficientes para mostrar hexágono
+  bool get hasTeamsData => _team1.isNotEmpty || _team2.isNotEmpty;
 
   // Inicializar con jugadores registrados
   void initializeWithPlayers(List<Map<String, dynamic>> registeredPlayers) {
+    print('🔄 initializeWithPlayers - Procesando ${registeredPlayers.length} jugadores');
+    
     _players = registeredPlayers.map((player) {
-      return {
+      print('🔄 Mapeando jugador original: $player');
+      
+      final mappedPlayer = {
         'id': player['id'],
         'name': player['username'] ?? '',
         'photoUrl': player['photo_url'] ?? '',
         'team': 0, // Todos empiezan sin asignar
         'position': player['position'] ?? 0,
         'registeredAt': player['registered_at'] ?? '',
+        'averageSkills': player['averageSkills'], // ¡IMPORTANTE: Conservar averageSkills!
       };
+      
+      print('🔄 Jugador mapeado: $mappedPlayer');
+      return mappedPlayer;
     }).toList();
     
     _updateTeamLists();
@@ -35,14 +54,23 @@ class TeamsProvider extends ChangeNotifier {
 
   // Mover jugador a un equipo específico
   void movePlayerToTeam(int playerId, int team) {
+    print('🎯 movePlayerToTeam - Jugador ID: $playerId, Equipo: $team');
+    
     final playerIndex = _players.indexWhere((player) => player['id'] == playerId);
-    if (playerIndex == -1) return;
+    if (playerIndex == -1) {
+      print('❌ movePlayerToTeam - Jugador no encontrado');
+      return;
+    }
 
+    final playerName = _players[playerIndex]['name'];
+    
     // Si el jugador ya está en ese equipo, lo removemos (vuelve a no asignado)
     if (_players[playerIndex]['team'] == team) {
       _players[playerIndex]['team'] = 0;
+      print('🔄 movePlayerToTeam - $playerName removido del equipo $team (ahora sin asignar)');
     } else {
       _players[playerIndex]['team'] = team;
+      print('➕ movePlayerToTeam - $playerName asignado al equipo $team');
     }
     
     _updateTeamLists();
@@ -120,6 +148,15 @@ class TeamsProvider extends ChangeNotifier {
     _team1 = getPlayersByTeam(1);
     _team2 = getPlayersByTeam(2);
     _unassignedPlayers = getPlayersByTeam(0);
+    
+    print('🔄 _updateTeamLists - Team1: ${_team1.length} jugadores, Team2: ${_team2.length} jugadores');
+    
+    // Calcular promedios de skills para cada equipo
+    _team1AverageSkills = calculateAverageSkills(_team1);
+    _team2AverageSkills = calculateAverageSkills(_team2);
+    
+    print('📈 Team1 skills: $_team1AverageSkills');
+    print('📈 Team2 skills: $_team2AverageSkills');
   }
 
   // Obtener URL completa de foto
@@ -131,5 +168,63 @@ class TeamsProvider extends ChangeNotifier {
     } else {
       return 'http://192.168.100.150:8000$photoUrl';
     }
+  }
+
+  // Calcular promedio de skills de una lista de jugadores
+  Map<String, double> calculateAverageSkills(List<Map<String, dynamic>> players) {
+    print('🔍 calculateAverageSkills - Jugadores recibidos: ${players.length}');
+    
+    if (players.isEmpty) {
+      print('⚠️ calculateAverageSkills - Lista vacía, retornando ceros');
+      return {
+        'velocidad': 0.0,
+        'resistencia': 0.0,
+        'tiro_arco': 0.0,
+        'gambeta': 0.0,
+        'pases': 0.0,
+        'defensa': 0.0,
+      };
+    }
+
+    double totalVelocidad = 0.0;
+    double totalResistencia = 0.0;
+    double totalTiroArco = 0.0;
+    double totalGambeta = 0.0;
+    double totalPases = 0.0;
+    double totalDefensa = 0.0;
+
+    for (var player in players) {
+      print('👤 Procesando jugador: ${player['name']} (ID: ${player['id']})');
+      final averageSkills = player['averageSkills'] as Map<String, dynamic>?;
+      print('📊 averageSkills del jugador: $averageSkills');
+      
+      if (averageSkills != null) {
+        // Mapear de inglés (API) a español (hexágono)
+        totalVelocidad += (averageSkills['speed'] ?? 0).toDouble();
+        totalResistencia += (averageSkills['stamina'] ?? 0).toDouble();
+        totalTiroArco += (averageSkills['shooting'] ?? 0).toDouble();
+        totalGambeta += (averageSkills['dribbling'] ?? 0).toDouble();
+        totalPases += (averageSkills['passing'] ?? 0).toDouble();
+        totalDefensa += (averageSkills['defending'] ?? 0).toDouble();
+        
+        print('✅ Mapeo: speed=${averageSkills['speed']} → velocidad, stamina=${averageSkills['stamina']} → resistencia, shooting=${averageSkills['shooting']} → tiro_arco');
+      } else {
+        print('❌ Jugador ${player['name']} NO tiene averageSkills');
+      }
+    }
+
+    final playerCount = players.length.toDouble();
+
+    final result = {
+      'velocidad': totalVelocidad / playerCount,
+      'resistencia': totalResistencia / playerCount,
+      'tiro_arco': totalTiroArco / playerCount,
+      'gambeta': totalGambeta / playerCount,
+      'pases': totalPases / playerCount,
+      'defensa': totalDefensa / playerCount,
+    };
+    
+    print('✅ calculateAverageSkills - Resultado final: $result');
+    return result;
   }
 }

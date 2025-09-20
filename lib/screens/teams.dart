@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/teams.dart';
+import '../widgets/dual_hexagon_chart.dart';
 
 class TeamsScreen extends StatefulWidget {
   final List<Map<String, dynamic>> registeredPlayers;
@@ -21,6 +22,12 @@ class _TeamsScreenState extends State<TeamsScreen> {
     // Inicializar el provider con los jugadores registrados
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final teamsProvider = Provider.of<TeamsProvider>(context, listen: false);
+      
+      print('🚀 TeamsScreen initState - Jugadores recibidos: ${widget.registeredPlayers.length}');
+      for (var player in widget.registeredPlayers) {
+        print('👤 Jugador completo: $player');
+      }
+      
       teamsProvider.initializeWithPlayers(widget.registeredPlayers);
     });
   }
@@ -51,8 +58,8 @@ class _TeamsScreenState extends State<TeamsScreen> {
             padding: const EdgeInsets.all(24.0),
             child: Column(
               children: [
-                // Hexágono vacío
-                _buildEmptyHexagon(),
+                // Hexágono de comparación de equipos
+                _buildTeamsComparisonHexagon(teamsProvider),
                 
                 const SizedBox(height: 24),
                 
@@ -71,40 +78,75 @@ class _TeamsScreenState extends State<TeamsScreen> {
     );
   }
 
-  Widget _buildEmptyHexagon() {
+  Widget _buildTeamsComparisonHexagon(TeamsProvider teamsProvider) {
     return Container(
-      width: 250,
-      height: 250,
+      width: 280,
+      height: 320,
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE2E8F0), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
-      child: const Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.hexagon_outlined,
-              size: 80,
-              color: Color(0xFF9CA3AF),
-            ),
-            SizedBox(height: 16),
             Text(
-              'Hexágono de comparación',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF6B7280),
+              'Comparación de Equipos',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF374151),
               ),
             ),
-            SizedBox(height: 4),
-            Text(
-              'Se mostrará cuando se asignen jugadores',
-              style: TextStyle(
-                fontSize: 12,
-                color: Color(0xFF9CA3AF),
-              ),
+            const SizedBox(height: 16),
+            
+            // Hexágono dual
+            Expanded(
+              child: teamsProvider.hasTeamsData
+                  ? Builder(
+                      builder: (context) {
+                        print('🎨 DualHexagonChart - Team1 skills: ${teamsProvider.team1AverageSkills}');
+                        print('🎨 DualHexagonChart - Team2 skills: ${teamsProvider.team2AverageSkills}');
+                        print('🎨 DualHexagonChart - Team1 count: ${teamsProvider.team1Count}');
+                        print('🎨 DualHexagonChart - Team2 count: ${teamsProvider.team2Count}');
+                        
+                        return DualHexagonChart(
+                          selfPerceptionSkills: teamsProvider.team1AverageSkills,
+                          averageOpinionSkills: teamsProvider.team2AverageSkills,
+                          numberOfOpinions: teamsProvider.team1Count + teamsProvider.team2Count,
+                          size: 220,
+                        );
+                      },
+                    )
+                  : const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.hexagon_outlined,
+                            size: 60,
+                            color: Color(0xFF9CA3AF),
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'Asigna jugadores para ver la comparación',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF9CA3AF),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
             ),
           ],
         ),
@@ -176,14 +218,18 @@ class _TeamsScreenState extends State<TeamsScreen> {
   }
 
   Widget _buildPlayerItem(Map<String, dynamic> player, TeamsProvider teamsProvider) {
+    final team = player['team'];
+    final backgroundColor = _getBackgroundColor(team);
+    final alignment = _getContentAlignment(team);
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: teamsProvider.getPlayerBorderColor(player['team']),
+          color: teamsProvider.getPlayerBorderColor(team),
           width: 2,
         ),
         boxShadow: [
@@ -223,31 +269,41 @@ class _TeamsScreenState extends State<TeamsScreen> {
           
           const SizedBox(width: 16),
           
-          // Foto del usuario
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: teamsProvider.getPlayerBorderColor(player['team']),
-                width: 2,
-              ),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: _buildPlayerPhoto(player, teamsProvider),
-          ),
-          
-          const SizedBox(width: 16),
-          
-          // Nombre del jugador
+          // Contenido central (foto y nombre)
           Expanded(
-            child: Text(
-              player['name'],
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: teamsProvider.getPlayerTextColor(player['team']),
+            child: Align(
+              alignment: alignment,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Foto del usuario
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: teamsProvider.getPlayerBorderColor(team),
+                        width: 2,
+                      ),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: _buildPlayerPhoto(player, teamsProvider),
+                  ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  // Nombre del jugador
+                  Text(
+                    player['name'],
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: teamsProvider.getPlayerTextColor(team),
+                    ),
+                    textAlign: _getTextAlign(team),
+                  ),
+                ],
               ),
             ),
           ),
@@ -302,6 +358,39 @@ class _TeamsScreenState extends State<TeamsScreen> {
         color: Colors.grey.shade200,
         child: const Icon(Icons.person, color: Colors.grey),
       );
+    }
+  }
+
+  Color _getBackgroundColor(int team) {
+    switch (team) {
+      case 1:
+        return const Color(0xFFE0F2FE); // Celeste claro para Team 1
+      case 2:
+        return const Color(0xFFFEE2E2); // Rojo claro para Team 2
+      default:
+        return Colors.white; // Blanco para no asignado
+    }
+  }
+
+  Alignment _getContentAlignment(int team) {
+    switch (team) {
+      case 1:
+        return Alignment.centerLeft; // Alineado a la izquierda para Team 1
+      case 2:
+        return Alignment.centerRight; // Alineado a la derecha para Team 2
+      default:
+        return Alignment.center; // Centrado para no asignado
+    }
+  }
+
+  TextAlign _getTextAlign(int team) {
+    switch (team) {
+      case 1:
+        return TextAlign.left; // Texto alineado a la izquierda para Team 1
+      case 2:
+        return TextAlign.right; // Texto alineado a la derecha para Team 2
+      default:
+        return TextAlign.center; // Texto centrado para no asignado
     }
   }
 }
