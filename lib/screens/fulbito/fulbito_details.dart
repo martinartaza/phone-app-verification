@@ -309,43 +309,50 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
   }
 
   Widget _buildInscriptionTab() {
-    if (widget.fulbito.registrationStatus == null) {
-      return const Center(
-        child: Text(
-          'No hay información de inscripción disponible',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 18,
-            color: Color(0xFF6B7280),
+    return Consumer<FulbitoProvider>(
+      builder: (context, fulbitoProvider, child) {
+        // Usar datos del FulbitoProvider en lugar del widget
+        final fulbito = fulbitoProvider.currentFulbito ?? widget.fulbito;
+        
+        if (fulbito.registrationStatus == null) {
+          return const Center(
+            child: Text(
+              'No hay información de inscripción disponible',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+          );
+        }
+
+        final status = fulbito.registrationStatus!;
+        final isRegistrationOpen = status.registrationOpen;
+        final isUserRegistered = status.userPosition != null;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Estado de inscripción
+              _buildInscriptionStatusCard(status, isRegistrationOpen, isUserRegistered),
+              
+              const SizedBox(height: 24),
+              
+              // Contenido según el estado
+              if (!isRegistrationOpen) ...[
+                _buildRegistrationClosedContent(status),
+              ] else if (isUserRegistered) ...[
+                _buildUserRegisteredContent(status),
+              ] else ...[
+                _buildRegistrationOpenContent(status),
+              ],
+            ],
           ),
-        ),
-      );
-    }
-
-    final status = widget.fulbito.registrationStatus!;
-    final isRegistrationOpen = status.registrationOpen;
-    final isUserRegistered = status.userPosition != null;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Estado de inscripción
-          _buildInscriptionStatusCard(status, isRegistrationOpen, isUserRegistered),
-          
-          const SizedBox(height: 24),
-          
-          // Contenido según el estado
-          if (!isRegistrationOpen) ...[
-            _buildRegistrationClosedContent(status),
-          ] else if (isUserRegistered) ...[
-            _buildUserRegisteredContent(status),
-          ] else ...[
-            _buildRegistrationOpenContent(status),
-          ],
-        ],
-      ),
+        );
+      },
     );
   }
 

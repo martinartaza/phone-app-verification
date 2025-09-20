@@ -28,29 +28,42 @@ class FulbitoInscriptionProvider extends ChangeNotifier {
 
   // Inscribirse en fulbito
   Future<bool> registerForFulbito(BuildContext context, int fulbitoId) async {
+    print('🔍 [FulbitoInscriptionProvider] Iniciando inscripción para fulbito: $fulbitoId');
     _setLoading(true);
 
     try {
       final regProvider = Provider.of<RegistrationProvider>(context, listen: false);
       final success = await regProvider.registerForFulbito(context, fulbitoId);
       
+      print('🔍 [FulbitoInscriptionProvider] Resultado de inscripción: $success');
+      
       if (success) {
+        print('🔍 [FulbitoInscriptionProvider] Inscripción exitosa, actualizando lista de jugadores...');
+        
         // Actualizar la lista de jugadores inscritos en FulbitoProvider
         final fulbitoProvider = Provider.of<FulbitoProvider>(context, listen: false);
         final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
         
+        print('🔍 [FulbitoInscriptionProvider] Token disponible: ${authProvider.token != null}');
+        print('🔍 [FulbitoInscriptionProvider] Fulbito actual: ${fulbitoProvider.currentFulbito?.id}');
+        
         if (authProvider.token != null && fulbitoProvider.currentFulbito != null) {
+          print('🔍 [FulbitoInscriptionProvider] Recargando detalles del fulbito...');
           await fulbitoProvider.loadFulbitoDetails(
             fulbitoProvider.currentFulbito!, 
             authProvider.phoneNumber ?? '', 
             authProvider.token!
           );
+          print('🔍 [FulbitoInscriptionProvider] Detalles del fulbito recargados');
+        } else {
+          print('🔍 [FulbitoInscriptionProvider] No se pudo recargar - token o fulbito nulos');
         }
       }
       
       _setLoading(false);
       return success;
     } catch (e) {
+      print('🔍 [FulbitoInscriptionProvider] Error durante inscripción: $e');
       _setError('Error al inscribirse: $e');
       _setLoading(false);
       return false;
