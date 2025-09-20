@@ -1196,13 +1196,52 @@ class _FulbitoItemState extends State<_FulbitoItem> {
               children: [
                 Icon(Icons.person, size: 14, color: Colors.grey[600]),
                 const SizedBox(width: 4),
-                Text(
-                  'Tu posición: ${status.userPosition}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    'Tu posición: ${status.userPosition}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
+                ),
+                // Botón de cancelar inscripción
+                Consumer<RegistrationProvider>(
+                  builder: (context, regProvider, child) {
+                    return GestureDetector(
+                      onTap: regProvider.isLoading ? null : () => regProvider.cancelRegistrationFromHome(context, widget.fulbito.id),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: regProvider.isLoading ? Colors.grey : const Color(0xFFEF4444),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (regProvider.isLoading ? Colors.grey : const Color(0xFFEF4444)).withOpacity(0.3),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: regProvider.isLoading
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Icon(
+                                Icons.person_remove_alt_1,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -1261,6 +1300,7 @@ class _FulbitoItemState extends State<_FulbitoItem> {
       ],
     );
   }
+
 
   Future<void> _acceptFulbito() async {
     if (widget.fulbito.invitationId == null) return;

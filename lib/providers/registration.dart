@@ -48,8 +48,103 @@ class RegistrationProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> cancelRegistration(BuildContext context, int fulbitoId) async {
+    _setLoading(true);
+
+    try {
+      final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+      if (authProvider.token == null) {
+        _setError('No hay token de autenticación');
+        return false;
+      }
+
+      final response = await _callCancelRegistrationAPI(authProvider.token!, fulbitoId);
+      
+      if (response['success']) {
+        // Mostrar modal de éxito
+        _showCancellationSuccessModal(context, response['data']);
+        
+        // Recargar datos para actualizar el estado
+        final invitationsProvider = Provider.of<InvitationsProvider>(context, listen: false);
+        invitationsProvider.load(authProvider.token!);
+        
+        _setLoading(false);
+        return true;
+      } else {
+        // Mostrar modal de error
+        _showCancellationErrorModal(context, response['message'] ?? 'Error al cancelar inscripción');
+        _setLoading(false);
+        return false;
+      }
+    } catch (e) {
+      _showCancellationErrorModal(context, 'Error: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  // Método específico para cancelar desde el home con modal de confirmación
+  Future<void> cancelRegistrationFromHome(BuildContext context, int fulbitoId) async {
+    // Mostrar modal de confirmación
+    final bool? confirmed = await _showCancelRegistrationConfirmationDialog(context);
+    
+    if (confirmed == true) {
+      // Si el usuario confirma, proceder con la cancelación
+      await cancelRegistration(context, fulbitoId);
+    }
+    // Si el usuario cancela (confirmed == false o null), no hacer nada
+  }
+
+  // Modal de confirmación para cancelar inscripción
+  Future<bool?> _showCancelRegistrationConfirmationDialog(BuildContext context) async {
+    return showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Cancelar Inscripción',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            '¿Estás seguro que quieres cancelar tu inscripción?',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'No',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text(
+                'Sí',
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<Map<String, dynamic>> _callRegistrationAPI(String token, int fulbitoId) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/auth/fulbito/$fulbitoId/register/');
+    final url = Uri.parse(ApiConfig.getFulbitoRegisterUrl(fulbitoId));
     
     final response = await http.post(
       url,
@@ -80,6 +175,42 @@ class RegistrationProvider extends ChangeNotifier {
       return {
         'success': false,
         'message': errorData['message'] ?? 'Error al inscribirse',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> _callCancelRegistrationAPI(String token, int fulbitoId) async {
+    final url = Uri.parse(ApiConfig.getFulbitoUnregisterUrl(fulbitoId));
+    
+    final response = await http.delete(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    print('🔍 Cancel HTTP Status: ${response.statusCode}');
+    print('🔍 Cancel Response Body: ${response.body}');
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      if (data['status'] == 'success') {
+        return {
+          'success': true,
+          'data': data['data'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Error al cancelar inscripción',
+        };
+      }
+    } else {
+      final errorData = jsonDecode(response.body);
+      return {
+        'success': false,
+        'message': errorData['message'] ?? 'Error al cancelar inscripción',
       };
     }
   }
@@ -301,6 +432,234 @@ class RegistrationProvider extends ChangeNotifier {
                   // Título de error
                   Text(
                     ApiConfig.registrationErrorTitle,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF721C24),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Mensaje de error
+                  Text(
+                    errorMessage,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF721C24),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Botón OK
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFDC3545),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 5,
+                      ),
+                      child: const Text(
+                        'OK',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCancellationSuccessModal(BuildContext context, Map<String, dynamic> data) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        // Auto-cerrar después de 5 segundos
+        Future.delayed(const Duration(seconds: 5), () {
+          if (context.mounted && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        });
+        
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          contentPadding: EdgeInsets.zero,
+          content: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            decoration: BoxDecoration(
+              color: const Color(0xFFD4EDDA),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF28A745), width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icono de éxito
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF28A745),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF28A745).withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.check_circle,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Título de éxito
+                  Text(
+                    'Inscripción Cancelada',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF155724),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Mensaje descriptivo
+                  Text(
+                    'Tu inscripción ha sido cancelada exitosamente',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF155724),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Botón OK
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF28A745),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 5,
+                      ),
+                      child: const Text(
+                        'OK',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCancellationErrorModal(BuildContext context, String errorMessage) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        // Auto-cerrar después de 5 segundos
+        Future.delayed(const Duration(seconds: 5), () {
+          if (context.mounted && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        });
+        
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          contentPadding: EdgeInsets.zero,
+          content: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8D7DA),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFDC3545), width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icono de error
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDC3545),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFDC3545).withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Título de error
+                  Text(
+                    'Error al Cancelar',
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,

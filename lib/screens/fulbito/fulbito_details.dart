@@ -613,11 +613,13 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
   }
 
   Widget _buildSkillsHexagon(RegistrationStatus status) {
-    return Consumer<FulbitoInscriptionProvider>(
-      builder: (context, inscriptionProvider, child) {
+    return Consumer2<FulbitoInscriptionProvider, FulbitoProvider>(
+      builder: (context, inscriptionProvider, fulbitoProvider, child) {
         final skills = inscriptionProvider.selectedPlayer != null
             ? inscriptionProvider.getSelectedPlayerSkills()
-            : inscriptionProvider.convertSkillsToMap(status.players);
+            : inscriptionProvider.convertSkillsToMap(fulbitoProvider.players.map((p) => {
+              'averageSkills': p.averageSkills,
+            }).toList());
         
         final title = inscriptionProvider.getHexagonTitle();
         

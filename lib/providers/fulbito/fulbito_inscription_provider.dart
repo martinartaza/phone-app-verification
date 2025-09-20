@@ -72,15 +72,42 @@ class FulbitoInscriptionProvider extends ChangeNotifier {
 
   // Cancelar inscripción
   Future<bool> cancelRegistration(BuildContext context, int fulbitoId) async {
+    print('🔍 [FulbitoInscriptionProvider] Iniciando cancelación para fulbito: $fulbitoId');
     _setLoading(true);
 
     try {
-      // TODO: Implementar API de cancelación cuando esté lista
-      await Future.delayed(const Duration(seconds: 1)); // Simulación
+      final regProvider = Provider.of<RegistrationProvider>(context, listen: false);
+      final success = await regProvider.cancelRegistration(context, fulbitoId);
+      
+      print('🔍 [FulbitoInscriptionProvider] Resultado de cancelación: $success');
+      
+      if (success) {
+        print('🔍 [FulbitoInscriptionProvider] Cancelación exitosa, actualizando lista de jugadores...');
+        
+        // Actualizar la lista de jugadores inscritos en FulbitoProvider
+        final fulbitoProvider = Provider.of<FulbitoProvider>(context, listen: false);
+        final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+        
+        print('🔍 [FulbitoInscriptionProvider] Token disponible: ${authProvider.token != null}');
+        print('🔍 [FulbitoInscriptionProvider] Fulbito actual: ${fulbitoProvider.currentFulbito?.id}');
+        
+        if (authProvider.token != null && fulbitoProvider.currentFulbito != null) {
+          print('🔍 [FulbitoInscriptionProvider] Recargando detalles del fulbito...');
+          await fulbitoProvider.loadFulbitoDetails(
+            fulbitoProvider.currentFulbito!, 
+            authProvider.phoneNumber ?? '', 
+            authProvider.token!
+          );
+          print('🔍 [FulbitoInscriptionProvider] Detalles del fulbito recargados');
+        } else {
+          print('🔍 [FulbitoInscriptionProvider] No se pudo recargar - token o fulbito nulos');
+        }
+      }
       
       _setLoading(false);
-      return true;
+      return success;
     } catch (e) {
+      print('🔍 [FulbitoInscriptionProvider] Error durante cancelación: $e');
       _setError('Error al cancelar inscripción: $e');
       _setLoading(false);
       return false;
@@ -214,15 +241,6 @@ class FulbitoInscriptionProvider extends ChangeNotifier {
     );
   }
 
-  // Mostrar mensaje temporal de cancelación
-  void showCancelRegistrationMessage(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Cancelación de inscripción (próximamente)'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-  }
 
   // Métodos privados
   void _setLoading(bool loading) {
