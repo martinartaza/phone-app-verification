@@ -7,13 +7,23 @@ import '../providers/invite_guest_player.dart';
 class InviteGuestPlayerScreen extends StatefulWidget {
   final Fulbito fulbito;
 
-  const InviteGuestPlayerScreen({Key? key, required this.fulbito}) : super(key: key);
+  const InviteGuestPlayerScreen({super.key, required this.fulbito});
 
   @override
   State<InviteGuestPlayerScreen> createState() => _InviteGuestPlayerScreenState();
 }
 
 class _InviteGuestPlayerScreenState extends State<InviteGuestPlayerScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Inicializar el nombre con "amige de [username]" cuando se abra la pantalla
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final inviteProvider = Provider.of<InviteGuestPlayerProvider>(context, listen: false);
+      inviteProvider.initializeName(context);
+    });
+  }
+
   @override
   void dispose() {
     // Limpiar el estado del provider cuando se cierre la pantalla
@@ -25,26 +35,10 @@ class _InviteGuestPlayerScreenState extends State<InviteGuestPlayerScreen> {
   Future<void> _inviteGuestPlayer() async {
     final inviteProvider = Provider.of<InviteGuestPlayerProvider>(context, listen: false);
     
-    final success = await inviteProvider.inviteGuestPlayer(widget.fulbito);
+    await inviteProvider.inviteGuestPlayer(context, widget.fulbito);
     
-    if (mounted) {
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Jugador invitado exitosamente'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(inviteProvider.error ?? 'Error al invitar jugador'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    // Los modales de éxito/error se manejan en el provider
+    // No necesitamos mostrar SnackBars adicionales aquí
   }
 
   @override
@@ -134,44 +128,19 @@ class _InviteGuestPlayerScreenState extends State<InviteGuestPlayerScreen> {
                       numberOfOpinions: 0,
                       photoUrl: null,
                       photoPath: null,
+                      isGoalkeeper: inviteProvider.isGoalkeeper,
+                      isStriker: inviteProvider.isStriker,
+                      isMidfielder: inviteProvider.isMidfielder,
+                      isDefender: inviteProvider.isDefender,
+                      showPositionCheckboxes: true,
                       onNameChanged: (value) => inviteProvider.nameController.text = value,
                       onAgeChanged: (value) => inviteProvider.updateAge(value),
                       onSkillChanged: (skillName, value) => inviteProvider.updateSkill(skillName, value),
-                    ),
-                    
-                    const SizedBox(height: 32),
-                    
-                    // Botón de invitar jugador
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: inviteProvider.isLoading ? null : _inviteGuestPlayer,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF8B5CF6),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 5,
-                        ),
-                        child: inviteProvider.isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : const Text(
-                                'Invitar Jugador',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
+                      onGoalkeeperChanged: () => inviteProvider.updateIsGoalkeeper(!inviteProvider.isGoalkeeper),
+                      onStrikerChanged: () => inviteProvider.updateIsStriker(!inviteProvider.isStriker),
+                      onMidfielderChanged: () => inviteProvider.updateIsMidfielder(!inviteProvider.isMidfielder),
+                      onDefenderChanged: () => inviteProvider.updateIsDefender(!inviteProvider.isDefender),
+                      onButtonPressed: () => _inviteGuestPlayer(),
                     ),
                   ],
                 ),

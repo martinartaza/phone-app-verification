@@ -14,6 +14,7 @@ import 'create_fulbito.dart';
 import 'invite_player.dart';
 import 'fulbito/fulbito_details.dart';
 import 'invite_guest_player_screen.dart';
+import '../providers/unregister_guest.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -1327,6 +1328,12 @@ class _FulbitoItemState extends State<_FulbitoItem> {
                 ],
               ],
             ),
+            
+            // Lista de invitados registrados
+            if (_getInvitedGuests(status.players).isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ..._getInvitedGuests(status.players).map((guest) => _buildInvitedGuestItem(guest)),
+            ],
           ],
         ],
       ),
@@ -1431,6 +1438,224 @@ class _FulbitoItemState extends State<_FulbitoItem> {
       setState(() {
         _isProcessing = false;
       });
+    }
+  }
+
+  // Filtrar invitados de la lista de jugadores
+  List<Map<String, dynamic>> _getInvitedGuests(List<Map<String, dynamic>> players) {
+    // Filtrar solo los jugadores con type: "guest"
+    return players.where((player) => player['type'] == 'guest').toList();
+  }
+
+  // Construir item de invitado con botón de desinscripción
+  Widget _buildInvitedGuestItem(Map<String, dynamic> guest) {
+    final guestName = guest['username'] ?? 'Invitado';
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Espaciador para empujar el contenido a la derecha
+          const Spacer(),
+          // Nombre del invitado alineado a la derecha
+          Text(
+            guestName,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF374151),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Botón de desinscripción (dos personas con menos en rojo) - mismo tamaño que botones de registro
+          GestureDetector(
+            onTap: () {
+              _showUnregisterGuestModal(guest);
+            },
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFEF4444).withOpacity(0.3),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.group_remove,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Mostrar modal de confirmación para desinscribir invitado
+  void _showUnregisterGuestModal(Map<String, dynamic> guest) {
+    final guestName = guest['username'] ?? 'Invitado';
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.group_remove,
+                  color: Color(0xFFEF4444),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Desinscribir Invitado',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '¿Estás seguro de que quieres desinscribir a este invitado?',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9FAFB),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFE5E7EB),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.person,
+                      color: Color(0xFF6B7280),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      guestName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF374151),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Esta acción no se puede deshacer.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFFEF4444),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF6B7280),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _unregisterGuest(guest);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Desinscribir',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Función para desinscribir invitado usando el provider
+  Future<void> _unregisterGuest(Map<String, dynamic> guest) async {
+    final guestName = guest['username'] ?? 'Invitado';
+    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+    final unregisterGuestProvider = Provider.of<UnregisterGuestProvider>(context, listen: false);
+    
+    if (authProvider.token != null) {
+      await unregisterGuestProvider.unregisterGuest(
+        token: authProvider.token!,
+        fulbitoId: widget.fulbito.id,
+        guestName: guestName,
+        context: context,
+      );
     }
   }
 }
