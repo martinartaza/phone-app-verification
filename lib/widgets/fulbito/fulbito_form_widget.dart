@@ -7,11 +7,13 @@ class FulbitoFormWidget extends StatefulWidget {
   final String? initialHour;
   final String? initialRegistrationDay;
   final String? initialRegistrationHour;
+  final String? initialInvitationGuestStartDay;
+  final String? initialInvitationGuestStartHour;
   final int? initialCapacity;
   final bool isEditMode;
   final bool showSaveButton;
   final String saveButtonText;
-  final Function(String name, String place, String day, String hour, String registrationDay, String registrationHour, int capacity)? onSave;
+  final Function(String name, String place, String day, String hour, String registrationDay, String registrationHour, String? invitationGuestStartDay, String? invitationGuestStartHour, int capacity)? onSave;
 
   const FulbitoFormWidget({
     Key? key,
@@ -21,6 +23,8 @@ class FulbitoFormWidget extends StatefulWidget {
     this.initialHour,
     this.initialRegistrationDay,
     this.initialRegistrationHour,
+    this.initialInvitationGuestStartDay,
+    this.initialInvitationGuestStartHour,
     this.initialCapacity,
     this.isEditMode = false,
     this.showSaveButton = false,
@@ -42,6 +46,11 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
   late String _selectedHour;
   late String _selectedRegistrationDay;
   late String _selectedRegistrationHour;
+  
+  // Variables para invitaciones de invitados
+  bool _invitationsEnabled = false;
+  late String _selectedInvitationGuestStartDay;
+  late String _selectedInvitationGuestStartHour;
 
   final List<Map<String, String>> _days = [
     {'value': 'monday', 'label': 'Lunes'},
@@ -81,6 +90,16 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
       initialRegistrationHour = initialRegistrationHour.substring(0, 5);
     }
     _selectedRegistrationHour = initialRegistrationHour;
+    
+    // Inicializar campos de invitaciones de invitados
+    _invitationsEnabled = widget.initialInvitationGuestStartDay != null && widget.initialInvitationGuestStartHour != null;
+    _selectedInvitationGuestStartDay = widget.initialInvitationGuestStartDay ?? 'monday';
+    
+    String initialInvitationGuestStartHour = widget.initialInvitationGuestStartHour ?? '20:00';
+    if (initialInvitationGuestStartHour.length > 5) {
+      initialInvitationGuestStartHour = initialInvitationGuestStartHour.substring(0, 5);
+    }
+    _selectedInvitationGuestStartHour = initialInvitationGuestStartHour;
   }
 
   @override
@@ -217,6 +236,11 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
               ),
             ],
           ),
+          
+          const SizedBox(height: 32),
+          
+          // Sección de habilitar invitados
+          _buildInvitationsSection(),
           
           const SizedBox(height: 32),
           
@@ -362,6 +386,97 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
     );
   }
 
+  Widget _buildInvitationsSection() {
+    return Column(
+      children: [
+        // Línea divisoria con texto centrado
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 1,
+                color: Colors.grey.shade300,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _invitationsEnabled = !_invitationsEnabled;
+                  });
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Switch(
+                      value: _invitationsEnabled,
+                      onChanged: (value) {
+                        setState(() {
+                          _invitationsEnabled = value;
+                        });
+                      },
+                      activeColor: const Color(0xFF8B5CF6),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Habilitar Invitados',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF374151),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: Container(
+                height: 1,
+                color: Colors.grey.shade300,
+              ),
+            ),
+          ],
+        ),
+        
+        // Campos de invitaciones (solo se muestran si está habilitado)
+        if (_invitationsEnabled) ...[
+          const SizedBox(height: 24),
+          _buildSectionTitle('Inicio de inscripciones de invitados'),
+          const SizedBox(height: 8),
+          const Text(
+            '¿Cuándo pueden empezar a inscribirse?',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildDropdown(
+                  value: _selectedInvitationGuestStartDay,
+                  items: _days,
+                  onChanged: (value) => setState(() => _selectedInvitationGuestStartDay = value!),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildTimeDropdown(
+                  value: _selectedInvitationGuestStartHour,
+                  items: _hours,
+                  onChanged: (value) => setState(() => _selectedInvitationGuestStartHour = value!),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
   void _saveChanges() {
     if (_formKey.currentState!.validate()) {
       if (widget.onSave != null) {
@@ -373,6 +488,8 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
           _selectedHour,
           _selectedRegistrationDay,
           _selectedRegistrationHour,
+          _invitationsEnabled ? _selectedInvitationGuestStartDay : null,
+          _invitationsEnabled ? _selectedInvitationGuestStartHour : null,
           capacity,
         );
       }

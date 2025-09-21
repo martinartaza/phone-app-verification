@@ -21,7 +21,8 @@ class ApiConfig {
       return 'http://192.168.100.150:8000';
     }
     */
-    return 'http://192.168.100.150:8000';
+    //return 'http://192.168.100.150:8000';
+    return 'https://4e31b249b36f.ngrok-free.app';
   }
   //static const String baseUrl = 'http://192.168.100.150:8000';
   // Configuraciones manuales para override si es necesario:

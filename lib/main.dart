@@ -15,6 +15,7 @@ import 'providers/fulbito/fulbito_inscription_provider.dart';
 import 'providers/vote.dart';
 import 'providers/registration.dart';
 import 'providers/teams.dart';
+import 'providers/invite_guest_player.dart';
 import 'screens/fulbito/invite_players.dart';
 import 'screens/teams.dart';
 
@@ -41,6 +42,7 @@ class MatchDayApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => VoteProvider()),
         ChangeNotifierProvider(create: (_) => RegistrationProvider()),
         ChangeNotifierProvider(create: (_) => TeamsProvider()),
+        ChangeNotifierProvider(create: (_) => InviteGuestPlayerProvider()),
       ],
       child: MaterialApp(
         title: 'MatchDay',

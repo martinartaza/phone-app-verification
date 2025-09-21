@@ -13,6 +13,7 @@ import 'vote_player_screen.dart';
 import 'create_fulbito.dart';
 import 'invite_player.dart';
 import 'fulbito/fulbito_details.dart';
+import 'invite_guest_player_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -1254,13 +1255,76 @@ class _FulbitoItemState extends State<_FulbitoItem> {
               children: [
                 Icon(Icons.sports_soccer, size: 14, color: Colors.grey[600]),
                 const SizedBox(width: 4),
-                Text(
-                  'Próximo: ${status.nextMatchDate} ${status.nextMatchHour}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+                Expanded(
+                  child: Text(
+                    'Próximo: ${status.nextMatchDate} ${status.nextMatchHour}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
                   ),
                 ),
+              ],
+            ),
+          ],
+          
+          // Estado de invitaciones de invitados
+          if (status.invitationOpensAt != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  status.invitationOpen ? Icons.person_add_alt : Icons.schedule,
+                  size: 14,
+                  color: status.invitationOpen ? const Color(0xFF10B981) : const Color(0xFF6B7280),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    status.invitationOpen 
+                        ? 'Invitaciones de invitados: ABIERTAS'
+                        : 'Invitaciones de invitados: CERRADAS',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: status.invitationOpen ? const Color(0xFF10B981) : Colors.grey[600],
+                      fontWeight: status.invitationOpen ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+                // Botón de invitar jugador (solo si las invitaciones están habilitadas)
+                if (status.invitationOpen) ...[
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => InviteGuestPlayerScreen(fulbito: widget.fulbito),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF8B5CF6),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF8B5CF6).withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.group_add,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ],

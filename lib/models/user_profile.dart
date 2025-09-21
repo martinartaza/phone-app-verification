@@ -25,10 +25,10 @@ class UserProfile {
     this.isDefender = false,
     this.profileCompleted = false,
     this.numberOfOpinions = 0,
-  }) : skills = skills ?? {
+        }) : skills = skills ?? {
           'velocidad': 50.0,
           'resistencia': 50.0,
-          'tiro': 50.0,
+          'tiro_arco': 50.0,
           'gambeta': 50.0,
           'pases': 50.0,
           'defensa': 50.0,
@@ -36,7 +36,7 @@ class UserProfile {
         averageSkills = averageSkills ?? {
           'velocidad': 0.0,
           'resistencia': 0.0,
-          'tiro': 0.0,
+          'tiro_arco': 0.0,
           'gambeta': 0.0,
           'pases': 0.0,
           'defensa': 0.0,

@@ -22,7 +22,7 @@ class PentagonChart extends StatelessWidget {
 
 class HexagonPainter extends CustomPainter {
   final Map<String, double> skills;
-  final List<String> skillOrder = ['velocidad', 'resistencia', 'tiro', 'gambeta', 'pases', 'defensa'];
+  final List<String> skillOrder = ['velocidad', 'resistencia', 'tiro_arco', 'gambeta', 'pases', 'defensa'];
   final List<String> skillLabels = ['Velocidad', 'Resistencia', 'Tiro a arco', 'Gambeta', 'Pases', 'Defensa'];
 
   HexagonPainter(this.skills);

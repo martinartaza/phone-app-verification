@@ -110,7 +110,7 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
         initialCapacity: widget.fulbito.capacity,
         isEditMode: true,
         saveButtonText: 'Actualizar Fulbito',
-        onSave: (name, place, day, hour, registrationDay, registrationHour, capacity) {
+        onSave: (name, place, day, hour, registrationDay, registrationHour, invitationGuestStartDay, invitationGuestStartHour, capacity) {
           // Mock: mostrar mensaje de actualización
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -414,6 +414,44 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF8B5CF6),
+              ),
+            ),
+          ],
+          
+          // Estado de invitaciones de invitados
+          if (status.invitationOpensAt != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: status.invitationOpen ? const Color(0xFFF0FDF4) : const Color(0xFFFEF3F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: status.invitationOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    status.invitationOpen ? Icons.person_add_alt : Icons.schedule,
+                    color: status.invitationOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      status.invitationOpen 
+                          ? 'Invitaciones de invitados: ABIERTAS'
+                          : 'Invitaciones de invitados: CERRADAS',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: status.invitationOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

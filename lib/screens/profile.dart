@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../providers/profile.dart';
@@ -81,6 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ListTile(
               leading: const Icon(Icons.photo_library),
               title: const Text('Galería'),
+              subtitle: kIsWeb ? const Text('Seleccionar archivo desde el dispositivo') : null,
               onTap: () {
                 Navigator.pop(context);
                 profileProvider.pickImage(ImageSource.gallery);
@@ -89,11 +91,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ListTile(
               leading: const Icon(Icons.photo_camera),
               title: const Text('Cámara'),
+              subtitle: kIsWeb 
+                ? const Text('Puede requerir permisos del navegador')
+                : const Text('Tomar foto con la cámara'),
               onTap: () {
                 Navigator.pop(context);
                 profileProvider.pickImage(ImageSource.camera);
               },
             ),
+            if (kIsWeb)
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Nota: En navegadores web, la cámara puede requerir permisos adicionales. Si no funciona, usa la opción de galería.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

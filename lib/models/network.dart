@@ -22,6 +22,9 @@ class RegistrationStatus {
   final String opensAt;
   final String currentTime;
   final int timeUntilOpen;
+  final bool invitationOpen;
+  final String? invitationOpensAt;
+  final int invitationTimeUntilOpen;
   final String nextMatchDate;
   final String nextMatchHour;
   final int capacity;
@@ -38,6 +41,9 @@ class RegistrationStatus {
     required this.opensAt,
     required this.currentTime,
     required this.timeUntilOpen,
+    required this.invitationOpen,
+    this.invitationOpensAt,
+    required this.invitationTimeUntilOpen,
     required this.nextMatchDate,
     required this.nextMatchHour,
     required this.capacity,
@@ -56,6 +62,9 @@ class RegistrationStatus {
       opensAt: json['opens_at'] ?? '',
       currentTime: json['current_time'] ?? '',
       timeUntilOpen: json['time_until_open'] ?? 0,
+      invitationOpen: json['invitation_open'] ?? false,
+      invitationOpensAt: json['invitation_opens_at'],
+      invitationTimeUntilOpen: json['invitation_time_until_open'] ?? 0,
       nextMatchDate: json['next_match_date'] ?? '',
       nextMatchHour: json['next_match_hour'] ?? '',
       capacity: json['capacity'] ?? 0,

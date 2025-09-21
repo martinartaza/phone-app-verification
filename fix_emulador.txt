@@ -1,0 +1,56 @@
+# Comandos para solucionar problemas con emuladores de Android Studio
+
+## 1. Diagnóstico inicial
+# Verificar el estado de Flutter y Android
+flutter doctor -v
+
+## 2. Aceptar licencias de Android
+# Este comando es necesario para que Flutter funcione correctamente con Android
+flutter doctor --android-licenses
+# (Aceptar todas las licencias escribiendo 'y' cuando se solicite)
+
+## 3. Reiniciar el servidor ADB
+# Esto limpia emuladores offline y reinicia la conexión
+adb kill-server
+adb start-server
+
+## 4. Verificar dispositivos disponibles
+# Ver qué dispositivos están conectados
+flutter devices
+
+## 5. Ver emuladores disponibles
+# Listar todos los emuladores configurados
+flutter emulators
+
+## 6. Lanzar un emulador específico (si es necesario)
+# flutter emulators --launch <emulator_id>
+# Ejemplo: flutter emulators --launch Medium_Phone_API_36
+
+## 7. Ejecutar la aplicación
+# En el emulador específico
+flutter run -d emulator-5556
+
+# O simplemente (Flutter detectará automáticamente el emulador)
+flutter run
+
+## 8. Comandos adicionales útiles
+
+# Verificar el estado de ADB
+adb devices
+
+# Reiniciar completamente ADB si hay problemas
+adb kill-server
+adb start-server
+
+# Limpiar caché de Flutter si hay problemas de compilación
+flutter clean
+flutter pub get
+
+# Verificar la configuración de Android
+flutter doctor --android-licenses
+
+## Notas importantes:
+- Si tienes múltiples emuladores, es mejor tener solo uno ejecutándose a la vez
+- El comando `adb kill-server && adb start-server` es muy útil para limpiar conexiones problemáticas
+- Siempre acepta las licencias de Android cuando se te solicite
+- Si un emulador se queda "colgado", puedes cerrarlo desde Android Studio o reiniciar ADB

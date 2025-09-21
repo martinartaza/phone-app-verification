@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/profile.dart';
 import '../models/user_profile.dart';
@@ -82,6 +83,11 @@ class ProfileProvider with ChangeNotifier {
 
   Future<void> pickImage(ImageSource source) async {
     try {
+      // En web, la cámara puede no estar disponible
+      if (kIsWeb && source == ImageSource.camera) {
+        print('📱 Web: Intentando acceder a la cámara...');
+      }
+      
       final XFile? image = await _imagePicker.pickImage(
         source: source,
         maxWidth: 512,
@@ -92,9 +98,24 @@ class ProfileProvider with ChangeNotifier {
       if (image != null) {
         _profile = _profile.copyWith(photoPath: image.path);
         notifyListeners();
+        print('✅ Imagen seleccionada: ${image.path}');
+      } else {
+        print('❌ No se seleccionó ninguna imagen');
       }
     } catch (e) {
-      _setError('Error al seleccionar imagen: $e');
+      String errorMessage = 'Error al seleccionar imagen: $e';
+      
+      // Mensajes más específicos para web
+      if (kIsWeb) {
+        if (e.toString().contains('camera')) {
+          errorMessage = 'No se pudo acceder a la cámara. Intenta seleccionar desde galería.';
+        } else if (e.toString().contains('permission')) {
+          errorMessage = 'Permisos de cámara denegados. Verifica la configuración del navegador.';
+        }
+      }
+      
+      _setError(errorMessage);
+      print('❌ Error al seleccionar imagen: $e');
     }
   }
 

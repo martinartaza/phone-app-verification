@@ -349,7 +349,7 @@ class _ProfileFormWidgetState extends State<ProfileFormWidget> {
     final skills = [
       {'key': 'velocidad', 'label': 'Velocidad', 'icon': Icons.flash_on},
       {'key': 'resistencia', 'label': 'Resistencia', 'icon': Icons.fitness_center},
-      {'key': 'tiro', 'label': 'Tiro a arco', 'icon': Icons.sports_soccer},
+      {'key': 'tiro_arco', 'label': 'Tiro a arco', 'icon': Icons.sports_soccer},
       {'key': 'gambeta', 'label': 'Gambeta', 'icon': Icons.shuffle},
       {'key': 'pases', 'label': 'Pases', 'icon': Icons.swap_horiz},
       {'key': 'defensa', 'label': 'Defensa', 'icon': Icons.shield},

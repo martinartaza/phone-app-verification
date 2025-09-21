@@ -100,7 +100,7 @@ class _CreateFulbitoScreenState extends State<CreateFulbitoScreen> {
     );
   }
 
-  Future<void> _createFulbito(String name, String place, String day, String hour, String registrationDay, String registrationHour, int capacity) async {
+  Future<void> _createFulbito(String name, String place, String day, String hour, String registrationDay, String registrationHour, String? invitationGuestStartDay, String? invitationGuestStartHour, int capacity) async {
     setState(() {
       _isLoading = true;
       _error = null;
@@ -125,6 +125,8 @@ class _CreateFulbitoScreenState extends State<CreateFulbitoScreen> {
         hour: '${hour}:00',
         registrationStartDay: registrationDay,
         registrationStartHour: '${registrationHour}:00',
+        invitationGuestStartDay: invitationGuestStartDay,
+        invitationGuestStartHour: invitationGuestStartHour != null ? '${invitationGuestStartHour}:00' : null,
         capacity: capacity,
       );
 
