@@ -41,6 +41,9 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
   late TextEditingController _nameController;
   late TextEditingController _placeController;
   late TextEditingController _capacityController;
+  late TextEditingController _hourController;
+  late TextEditingController _registrationHourController;
+  late TextEditingController _invitationHourController;
   
   late String _selectedDay;
   late String _selectedHour;
@@ -68,6 +71,9 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
     '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'
   ];
 
+  // Validación de hora HH:MM (00-23):(00-59)
+  final RegExp _hhmmRegex = RegExp(r'^(?:[01][0-9]|2[0-3]):[0-5][0-9]$');
+
   @override
   void initState() {
     super.initState();
@@ -77,30 +83,33 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
     _selectedDay = widget.initialDay ?? 'saturday';
     
     // Limpiar la hora para que coincida con el formato del dropdown (HH:MM)
-    String initialHour = widget.initialHour ?? '18:00';
+    String initialHour = widget.initialHour ?? '12:00';
     if (initialHour.length > 5) {
       initialHour = initialHour.substring(0, 5);
     }
     _selectedHour = initialHour;
+    _hourController = TextEditingController(text: _selectedHour);
     
     _selectedRegistrationDay = widget.initialRegistrationDay ?? 'monday';
     
     // Limpiar la hora de registro para que coincida con el formato del dropdown (HH:MM)
-    String initialRegistrationHour = widget.initialRegistrationHour ?? '20:00';
+    String initialRegistrationHour = widget.initialRegistrationHour ?? '12:00';
     if (initialRegistrationHour.length > 5) {
       initialRegistrationHour = initialRegistrationHour.substring(0, 5);
     }
     _selectedRegistrationHour = initialRegistrationHour;
+    _registrationHourController = TextEditingController(text: _selectedRegistrationHour);
     
     // Inicializar campos de invitaciones de invitados
     _invitationsEnabled = widget.initialInvitationGuestStartDay != null && widget.initialInvitationGuestStartHour != null;
     _selectedInvitationGuestStartDay = widget.initialInvitationGuestStartDay ?? 'monday';
     
-    String initialInvitationGuestStartHour = widget.initialInvitationGuestStartHour ?? '20:00';
+    String initialInvitationGuestStartHour = widget.initialInvitationGuestStartHour ?? '12:00';
     if (initialInvitationGuestStartHour.length > 5) {
       initialInvitationGuestStartHour = initialInvitationGuestStartHour.substring(0, 5);
     }
     _selectedInvitationGuestStartHour = initialInvitationGuestStartHour;
+    _invitationHourController = TextEditingController(text: _selectedInvitationGuestStartHour);
   }
 
   @override
@@ -196,10 +205,9 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildTimeDropdown(
-                  value: _selectedHour,
-                  items: _hours,
-                  onChanged: (value) => setState(() => _selectedHour = value!),
+                child: _buildTimeInput(
+                  controller: _hourController,
+                  onChanged: (value) => setState(() => _selectedHour = value),
                 ),
               ),
             ],
@@ -229,10 +237,9 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildTimeDropdown(
-                  value: _selectedRegistrationHour,
-                  items: _hours,
-                  onChanged: (value) => setState(() => _selectedRegistrationHour = value!),
+                child: _buildTimeInput(
+                  controller: _registrationHourController,
+                  onChanged: (value) => setState(() => _selectedRegistrationHour = value),
                 ),
               ),
             ],
@@ -320,23 +327,38 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
     required List<String> items,
     required ValueChanged<String?> onChanged,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          items: items.map((hour) => DropdownMenuItem(
-            value: hour,
-            child: Text(hour),
-          )).toList(),
-          onChanged: onChanged,
+    // Obsoleto: mantenido para compatibilidad si alguna ruta antigua lo usa.
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildTimeInput({
+    required TextEditingController controller,
+    required ValueChanged<String> onChanged,
+  }) {
+    return TextFormField(
+      controller: controller,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        hintText: '12:00',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
         ),
+        focusedBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: Color(0xFF8B5CF6), width: 2),
+        ),
+        errorBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.red, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
+      keyboardType: TextInputType.datetime,
+      validator: (value) {
+        final text = (value ?? '').trim();
+        if (text.isEmpty) return 'Ingrese una hora';
+        if (!_hhmmRegex.hasMatch(text)) return 'Formato HH:MM (00-23):(00-59)';
+        return null;
+      },
     );
   }
 
@@ -465,10 +487,9 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildTimeDropdown(
-                  value: _selectedInvitationGuestStartHour,
-                  items: _hours,
-                  onChanged: (value) => setState(() => _selectedInvitationGuestStartHour = value!),
+                child: _buildTimeInput(
+                  controller: _invitationHourController,
+                  onChanged: (value) => setState(() => _selectedInvitationGuestStartHour = value),
                 ),
               ),
             ],
@@ -486,11 +507,11 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
           _nameController.text.trim(),
           _placeController.text.trim(),
           _selectedDay,
-          _selectedHour,
+          _hourController.text.trim(),
           _selectedRegistrationDay,
-          _selectedRegistrationHour,
+          _registrationHourController.text.trim(),
           _invitationsEnabled ? _selectedInvitationGuestStartDay : null,
-          _invitationsEnabled ? _selectedInvitationGuestStartHour : null,
+          _invitationsEnabled ? _invitationHourController.text.trim() : null,
           capacity,
         );
       }
