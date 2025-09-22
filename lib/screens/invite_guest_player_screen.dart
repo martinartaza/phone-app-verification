@@ -65,57 +65,63 @@ class _InviteGuestPlayerScreenState extends State<InviteGuestPlayerScreen> {
         child: Consumer<InviteGuestPlayerProvider>(
           builder: (context, inviteProvider, child) {
             return SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
               child: Form(
                 key: inviteProvider.formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Información del fulbito
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Invitar jugador a:',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF374151),
+                    Center(
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Invitar jugador a:',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF374151),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            widget.fulbito.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF111827),
+                            const SizedBox(height: 8),
+                            Text(
+                              widget.fulbito.name,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF111827),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${_formatDay(widget.fulbito.day)} ${_formatTime(widget.fulbito.hour)}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF6B7280),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${_formatDay(widget.fulbito.day)} ${_formatTime(widget.fulbito.hour)}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF6B7280),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                     
                     const SizedBox(height: 24),
                     
                     // Formulario del jugador invitado
-                    ProfileFormWidget(
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: ProfileFormWidget(
                       title: 'Datos del Jugador Invitado',
                       subtitle: 'Completa la información del jugador que quieres invitar',
                       buttonText: 'Invitar Jugador',
@@ -141,6 +147,8 @@ class _InviteGuestPlayerScreenState extends State<InviteGuestPlayerScreen> {
                       onMidfielderChanged: () => inviteProvider.updateIsMidfielder(!inviteProvider.isMidfielder),
                       onDefenderChanged: () => inviteProvider.updateIsDefender(!inviteProvider.isDefender),
                       onButtonPressed: () => _inviteGuestPlayer(),
+                    ),
+                      ),
                     ),
                   ],
                 ),

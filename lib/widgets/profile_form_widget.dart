@@ -369,18 +369,16 @@ class _ProfileFormWidgetState extends State<ProfileFormWidget> {
                 color: const Color(0xFF8B5CF6),
                 size: 24,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  skill['label'] as String,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF374151),
-                  ),
+              const SizedBox(width: 8),
+              Text(
+                skill['label'] as String,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF374151),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Text(
                 skillValue.round().toString(),
                 style: const TextStyle(
@@ -389,9 +387,8 @@ class _ProfileFormWidgetState extends State<ProfileFormWidget> {
                   color: Color(0xFF8B5CF6),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
-                flex: 2,
                 child: SliderTheme(
                   data: SliderTheme.of(context).copyWith(
                     activeTrackColor: const Color(0xFF8B5CF6),
