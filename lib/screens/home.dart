@@ -913,6 +913,43 @@ class _FulbitoItemState extends State<_FulbitoItem> {
     return time;
   }
 
+  String _formatDateTime(String dateTime) {
+    try {
+      // Parsear la fecha y extraer solo la parte sin timezone
+      final String dateWithoutTz = dateTime.split('T')[0]; // 2025-09-22
+      final String timeWithoutTz = dateTime.split('T')[1].split('-')[0]; // 08:00:00
+      
+      final DateTime parsed = DateTime.parse('${dateWithoutTz}T$timeWithoutTz');
+      final String formatted = '${parsed.day}/${parsed.month}/${parsed.year} ${parsed.hour.toString().padLeft(2, '0')}:${parsed.minute.toString().padLeft(2, '0')}';
+      return formatted;
+    } catch (e) {
+      return dateTime;
+    }
+  }
+
+  bool _shouldShowInvitationInfo(RegistrationStatus status) {
+    try {
+      // Si no hay información de invitaciones, no mostrar
+      if (status.invitationOpensAt == null || status.nextMatchDate.isEmpty || status.nextMatchHour.isEmpty) {
+        return false;
+      }
+
+      // Extraer fecha y hora de la invitación
+      final String invitationDate = status.invitationOpensAt!.split('T')[0];
+      final String invitationTime = status.invitationOpensAt!.split('T')[1].split('-')[0];
+      
+      // Extraer fecha y hora del partido
+      final String matchDate = status.nextMatchDate;
+      final String matchTime = status.nextMatchHour;
+      
+      // Comparar si son el mismo día y hora
+      return !(invitationDate == matchDate && invitationTime == matchTime);
+    } catch (e) {
+      // En caso de error, mostrar la información
+      return true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -1208,8 +1245,115 @@ class _FulbitoItemState extends State<_FulbitoItem> {
             ],
           ),
           
-          // Información del usuario inscrito (si está inscrito como player o substitute)
-          if (userPlayerInfo != null) ...[
+          // Información de cuándo se abre la inscripción (solo si está cerrada)
+          if (!status.registrationOpen) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3B82F6).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.schedule,
+                          size: 16,
+                          color: Color(0xFF3B82F6),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Inscripción se habilita',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF6B7280),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _formatDateTime(status.opensAt),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF1F2937),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (status.invitationOpensAt != null && _shouldShowInvitationInfo(status)) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B5CF6).withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.group_add,
+                            size: 16,
+                            color: Color(0xFF8B5CF6),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Invitaciones se habilitan',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF6B7280),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _formatDateTime(status.invitationOpensAt!),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF1F2937),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+          
+          // Información del usuario inscrito (solo si la inscripción está abierta)
+          if (status.registrationOpen && userPlayerInfo != null) ...[
             const SizedBox(height: 4),
             Row(
               children: [
@@ -1268,8 +1412,8 @@ class _FulbitoItemState extends State<_FulbitoItem> {
             ),
           ],
           
-          // Próximo partido
-          if (status.nextMatchDate.isNotEmpty) ...[
+          // Próximo partido (solo si la inscripción está abierta)
+          if (status.registrationOpen && status.nextMatchDate.isNotEmpty) ...[
             const SizedBox(height: 4),
             Row(
               children: [
@@ -1288,8 +1432,9 @@ class _FulbitoItemState extends State<_FulbitoItem> {
             ),
           ],
           
-          // Estado de invitaciones de invitados
-          if (status.invitationOpensAt != null) ...[
+          
+          // Estado de invitaciones de invitados (solo si la inscripción está abierta)
+          if (status.registrationOpen && status.invitationOpensAt != null) ...[
             const SizedBox(height: 4),
             Row(
               children: [
