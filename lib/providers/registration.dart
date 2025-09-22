@@ -760,4 +760,70 @@ class RegistrationProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+  /// Determina qué botón mostrar basado en el estado de inscripción del usuario
+  bool shouldShowInscriptionButton({
+    required List<Map<String, dynamic>> players,
+    required int? currentUserId,
+    required bool registrationOpen,
+  }) {
+    print('🔍 shouldShowInscriptionButton - Debug:');
+    print('  - currentUserId: $currentUserId');
+    print('  - registrationOpen: $registrationOpen');
+    print('  - players: $players');
+    
+    // Si no hay usuario actual, no mostrar botón de inscripción
+    if (currentUserId == null) {
+      print('  - Resultado: false (no currentUserId)');
+      return false;
+    }
+    
+    // Si la inscripción está cerrada, no mostrar botón de inscripción
+    if (!registrationOpen) {
+      print('  - Resultado: false (registration closed)');
+      return false;
+    }
+    
+    // Verificar si el usuario está inscrito como "player" o "substitute" (no como "guest")
+    final bool isUserRegisteredAsPlayer = players.any((player) => 
+        player['userid'] == currentUserId && 
+        player['type'] != 'guest'
+    );
+    
+    print('  - isUserRegisteredAsPlayer: $isUserRegisteredAsPlayer');
+    
+    // Si está inscrito como player/substitute, mostrar botón de desinscripción
+    // Si NO está inscrito como player/substitute, mostrar botón de inscripción
+    final bool result = !isUserRegisteredAsPlayer;
+    print('  - Resultado final: $result (${result ? "INSCRIPCIÓN" : "DESINSCRIPCIÓN"})');
+    
+    return result;
+  }
+
+  /// Obtiene la información del usuario inscrito
+  Map<String, dynamic>? getUserPlayerInfo({
+    required List<Map<String, dynamic>> players,
+    required int? currentUserId,
+  }) {
+    print('🔍 getUserPlayerInfo - Debug:');
+    print('  - currentUserId: $currentUserId');
+    print('  - players: $players');
+    
+    if (currentUserId == null) {
+      print('  - Resultado: null (no currentUserId)');
+      return null;
+    }
+    
+    try {
+      final result = players.firstWhere((player) => 
+          player['userid'] == currentUserId && 
+          player['type'] != 'guest'
+      );
+      print('  - Resultado: $result');
+      return result;
+    } catch (e) {
+      print('  - Resultado: null (usuario no encontrado como player/substitute)');
+      return null;
+    }
+  }
 }

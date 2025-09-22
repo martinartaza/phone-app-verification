@@ -1099,8 +1099,25 @@ class _FulbitoItemState extends State<_FulbitoItem> {
   Widget _buildRegistrationStatus() {
     final status = widget.fulbito.registrationStatus!;
     
-    // Determinar si mostrar el icono de inscripción
-    final bool showRegisterIcon = status.registrationOpen && status.userPosition == null;
+    // Obtener el ID del usuario actual
+    final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.userData?.id;
+    
+    // Usar el provider para determinar qué botón mostrar
+    final regProvider = Provider.of<RegistrationProvider>(context, listen: false);
+    final bool showInscriptionButton = regProvider.shouldShowInscriptionButton(
+      players: status.players,
+      currentUserId: currentUserId,
+      registrationOpen: status.registrationOpen,
+    );
+    
+    // Obtener información del usuario inscrito
+    final userPlayerInfo = regProvider.getUserPlayerInfo(
+      players: status.players,
+      currentUserId: currentUserId,
+    );
+    
+    final int? userPosition = userPlayerInfo?['position'];
     
     return Container(
       width: double.infinity,
@@ -1132,8 +1149,8 @@ class _FulbitoItemState extends State<_FulbitoItem> {
                   color: status.registrationOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
                 ),
               ),
-              // Icono de inscripción (solo si está abierto y no está inscrito)
-              if (showRegisterIcon) ...[
+              // Botón de inscripción (determinado por el provider)
+              if (showInscriptionButton) ...[
                 const Spacer(),
                 Consumer<RegistrationProvider>(
                   builder: (context, regProvider, child) {
@@ -1191,8 +1208,8 @@ class _FulbitoItemState extends State<_FulbitoItem> {
             ],
           ),
           
-          // Posición del usuario (si está inscrito)
-          if (status.userPosition != null) ...[
+          // Información del usuario inscrito (si está inscrito como player o substitute)
+          if (userPlayerInfo != null) ...[
             const SizedBox(height: 4),
             Row(
               children: [
@@ -1200,7 +1217,9 @@ class _FulbitoItemState extends State<_FulbitoItem> {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    'Tu posición: ${status.userPosition}',
+                    userPosition != null 
+                        ? 'Tu posición: $userPosition'
+                        : 'Inscrito como jugador',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey[600],
