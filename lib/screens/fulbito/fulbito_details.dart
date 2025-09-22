@@ -6,9 +6,12 @@ import '../../widgets/fulbito/fulbito_form_widget.dart';
 import '../../widgets/dual_hexagon_chart.dart';
 import '../../providers/fulbito/fulbito_provider.dart';
 import '../../providers/fulbito/fulbito_inscription_provider.dart';
+import '../../providers/registration.dart';
 import '../../providers/auth.dart' as auth_provider;
 import '../../config/api_config.dart';
 import '../teams.dart';
+import '../invite_guest_player_screen.dart';
+import '../../providers/unregister_guest.dart';
 
 class FulbitoDetailsScreen extends StatefulWidget {
   final Fulbito fulbito;
@@ -30,6 +33,7 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
   DateTime? _invDeadline;
   late final ValueNotifier<int> _ticker;
   bool _isRefreshingOnZero = false;
+  // Ya no usamos selección de invitado; la cancelación va como acción por item
 
   @override
   void initState() {
@@ -440,43 +444,7 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
             ),
           ],
           
-          // Estado de invitaciones de invitados
-          if (status.invitationOpensAt != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: status.invitationOpen ? const Color(0xFFF0FDF4) : const Color(0xFFFEF3F2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: status.invitationOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    status.invitationOpen ? Icons.person_add_alt : Icons.schedule,
-                    color: status.invitationOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      status.invitationOpen 
-                          ? 'Invitaciones de invitados: ABIERTAS'
-                          : 'Invitaciones de invitados: CERRADAS',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: status.invitationOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          // Se oculta sección de invitaciones en la tarjeta superior
         ],
       ),
     );
@@ -520,11 +488,225 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
   Widget _buildRegistrationOpenContent(RegistrationStatus status) {
     return Column(
       children: [
-        // Botón Armar Equipos (sin inscripción aquí)
+        // Botón (Inscribirse o Desinscribirse) según si el usuario ya está registrado (player/substitute)
+        Consumer<RegistrationProvider>(
+          builder: (context, regProvider, child) {
+            final authProv = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+            final currentUserId = authProv.userData?.id;
+            final userInfo = regProvider.getUserPlayerInfo(players: status.players, currentUserId: currentUserId);
+            final bool isUserRegistered = userInfo != null; // type != guest
+
+            if (isUserRegistered) {
+              // Mostrar botón de Desinscribir
+              return SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: regProvider.isLoading
+                      ? null
+                      : () async {
+                          await regProvider.cancelRegistrationFromHome(context, widget.fulbito.id);
+                          if (!mounted) return;
+                          if (authProv.token != null) {
+                            await Provider.of<FulbitoProvider>(context, listen: false).loadFulbitoDetails(
+                              widget.fulbito,
+                              authProv.phoneNumber ?? '',
+                              authProv.token!,
+                            );
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ).copyWith(
+                    backgroundColor: MaterialStateProperty.all(Colors.transparent),
+                  ),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEF4444), Color(0xFFF97316)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Center(
+                      child: regProvider.isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Text(
+                              'DESINSCRIBIRSE',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            // Mostrar botón Inscribirse
+            return SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: regProvider.isLoading
+                    ? null
+                    : () async {
+                        final success = await regProvider.registerForFulbito(context, widget.fulbito.id);
+                        if (!mounted) return;
+                        if (success && authProv.token != null) {
+                          await Provider.of<FulbitoProvider>(context, listen: false).loadFulbitoDetails(
+                            widget.fulbito,
+                            authProv.phoneNumber ?? '',
+                            authProv.token!,
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ).copyWith(
+                  backgroundColor: MaterialStateProperty.all(Colors.transparent),
+                ),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Center(
+                    child: regProvider.isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Text(
+                            'INSCRIBIRSE',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        // Botón Invitar (debajo de inscribirse, mismo ancho/estilo degradado)
+        if (status.invitationOpen) ...[
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => InviteGuestPlayerScreen(fulbito: widget.fulbito),
+                  ),
+                );
+                final authProv = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+                if (authProv.token != null && mounted) {
+                  await Provider.of<FulbitoProvider>(context, listen: false).loadFulbitoDetails(
+                    widget.fulbito,
+                    authProv.phoneNumber ?? '',
+                    authProv.token!,
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ).copyWith(
+                backgroundColor: MaterialStateProperty.all(Colors.transparent),
+              ),
+              child: Ink(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Center(
+                  child: Text(
+                    'INVITAR JUGADOR',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
+        // Botón Armar Equipos
         _buildCreateTeamsButton(),
         const SizedBox(height: 24),
         // Lista de jugadores en solo lectura
         _buildRegisteredPlayersList(status, readOnly: true),
+
+        if (status.invitationOpen) ...[
+          const SizedBox(height: 16),
+          // Botón Invitar Invitado (solo si invitation_open = true)
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => InviteGuestPlayerScreen(fulbito: widget.fulbito),
+                  ),
+                );
+                // Al volver, refrescar detalle para reflejar nuevos invitados
+                final authProv = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+                if (authProv.token != null && mounted) {
+                  await Provider.of<FulbitoProvider>(context, listen: false).loadFulbitoDetails(
+                    widget.fulbito,
+                    authProv.phoneNumber ?? '',
+                    authProv.token!,
+                  );
+                }
+              },
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF8B5CF6), width: 2),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                foregroundColor: const Color(0xFF8B5CF6),
+              ),
+              icon: const Icon(Icons.group_add),
+              label: const Text('INVITAR JUGADOR'),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -680,7 +862,14 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
     final position = player['position'] ?? 0;
     final username = player['username'] ?? '';
     final photoUrl = player['photo_url'] ?? '';
-    final registeredAt = player['registered_at'] ?? '';
+    final type = (player['type'] ?? '').toString();
+    final authProv = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+    final int? currentUserId = authProv.userData?.id;
+    // Debug
+    // ignore: avoid_print
+    print('[FulbitoDetails] myGuest? type=$type, player[userid]=${player['userid']} vs currentUserId=$currentUserId');
+    final bool isMyGuest = type == 'guest' && player['userid'] == currentUserId;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -739,14 +928,45 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
               ),
             ),
           ),
-          if (registeredAt.isNotEmpty)
-            Text(
-              _formatTime(registeredAt),
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF6B7280),
+          if (isMyGuest) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () async {
+                if (authProv.token != null) {
+                  final unregisterProvider = Provider.of<UnregisterGuestProvider>(context, listen: false);
+                  await unregisterProvider.unregisterGuest(
+                    token: authProv.token!,
+                    fulbitoId: widget.fulbito.id,
+                    guestName: username,
+                    context: context,
+                  );
+                  if (mounted) {
+                    await Provider.of<FulbitoProvider>(context, listen: false).loadFulbitoDetails(
+                      widget.fulbito,
+                      authProv.phoneNumber ?? '',
+                      authProv.token!,
+                    );
+                  }
+                }
+              },
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFEF4444).withOpacity(0.3),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.group_remove, color: Colors.white, size: 18),
               ),
             ),
+          ],
         ],
       ),
     );
