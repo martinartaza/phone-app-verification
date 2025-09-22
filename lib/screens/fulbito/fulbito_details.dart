@@ -432,6 +432,65 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
               color: Color(0xFF6B7280),
             ),
           ),
+          // Bloque de invitación de invitados (solo cuando la inscripción normal ya está abierta)
+          if (isOpen && status.invitationOpensAt != null && !status.invitationOpen) ...[
+            const SizedBox(height: 8),
+            // Si hay countdown de invitación (< 3000s), mostrarlo en dos líneas
+            if (status.invitationTimeUntilOpen > 0 && status.invitationTimeUntilOpen < 3000) ...[
+              const Text(
+                'Inscripción de invitado se abre en',
+                style: TextStyle(fontSize: 14, color: Color(0xFF6B7280), fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
+              Builder(builder: (context) {
+                // Iniciar timer de invitación si no corre aún (colchón +1s)
+                if (_invCountdown == null) {
+                  _startCountdown(isRegistration: false, seconds: status.invitationTimeUntilOpen + 1);
+                }
+                return ValueListenableBuilder<int>(
+                  valueListenable: _ticker,
+                  builder: (_, __, ___) {
+                    final secs = (_invCountdown ?? status.invitationTimeUntilOpen).clamp(0, 9999);
+                    return Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.schedule, size: 18, color: Color(0xFF8B5CF6)),
+                          const SizedBox(width: 6),
+                          Text(
+                            _formatCountdown(secs),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF8B5CF6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              }),
+            ] else ...[
+              const Text(
+                'Inscripción de invitado cerrada hasta',
+                style: TextStyle(fontSize: 14, color: Color(0xFF6B7280), fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
+              Center(
+                child: Text(
+                  _formatDayMonthTime(status.invitationOpensAt!),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF8B5CF6),
+                  ),
+                ),
+              ),
+            ],
+          ],
           if (status.userPosition != null) ...[
             const SizedBox(height: 8),
             Text(
@@ -451,6 +510,12 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
   }
 
   Widget _buildRegistrationClosedContent(RegistrationStatus status) {
+    final bool showCountdown = status.timeUntilOpen > 0 && status.timeUntilOpen < 3000;
+    if (showCountdown && _regCountdown == null) {
+      // Iniciar timer con colchón +1s
+      _startCountdown(isRegistration: true, seconds: status.timeUntilOpen + 1);
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -461,25 +526,53 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.schedule,
+          Icon(
+            showCountdown ? Icons.timer : Icons.schedule,
             size: 48,
-            color: Color(0xFF6B7280),
+            color: const Color(0xFF6B7280),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Inscripción CERRADA hasta:',
-            style: TextStyle(fontSize: 16, color: Color(0xFF374151)),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _formatOpensAt(status.opensAt),
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF8B5CF6),
+          if (showCountdown) ...[
+            const Text(
+              'La inscripción se habilita en:',
+              style: TextStyle(fontSize: 16, color: Color(0xFF374151)),
             ),
-          ),
+            const SizedBox(height: 8),
+            ValueListenableBuilder<int>(
+              valueListenable: _ticker,
+              builder: (_, __, ___) {
+                final text = _formatCountdown((_regCountdown ?? status.timeUntilOpen).clamp(0, 9999));
+                return Center(
+                  child: Text(
+                    text,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF8B5CF6),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ] else ...[
+            const Text(
+              'Inscripción CERRADA hasta:',
+              style: TextStyle(fontSize: 16, color: Color(0xFF374151)),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                _formatOpensAt(status.opensAt),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF8B5CF6),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1051,6 +1144,28 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
     }
   }
 
+  String _formatDayMonthTime(String dateTime) {
+    try {
+      final parts = dateTime.split('T');
+      if (parts.length < 2) return dateTime;
+      final datePart = parts[0];
+      String timePart = parts[1];
+      if (timePart.contains('-')) {
+        timePart = timePart.split('-')[0];
+      } else if (timePart.contains('+')) {
+        timePart = timePart.split('+')[0];
+      }
+      final ymd = datePart.split('-');
+      if (ymd.length != 3) return dateTime;
+      final m = ymd[1];
+      final d = ymd[2];
+      final hhmm = timePart.substring(0, 5);
+      return '${d.padLeft(2, '0')}/${m.padLeft(2, '0')} $hhmm';
+    } catch (e) {
+      return dateTime;
+    }
+  }
+
   void _ensureTimersFromStatus(RegistrationStatus status) {
     // Registrar cuenta regresiva si faltan menos de ~58 min y más de 0
     if (_regCountdown == null && status.timeUntilOpen > 0 && status.timeUntilOpen < 3500) {
@@ -1077,17 +1192,17 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
         setState(() {
           if (_regDeadline != null) {
             _regCountdown = _regDeadline!.difference(DateTime.now()).inSeconds;
-            if (_regCountdown! <= 0) _regCountdown = null;
+            if (_regCountdown! <= 0) _regCountdown = 0;
           }
           if (_invDeadline != null) {
             _invCountdown = _invDeadline!.difference(DateTime.now()).inSeconds;
-            if (_invCountdown! <= 0) _invCountdown = null;
+            if (_invCountdown! <= 0) _invCountdown = 0;
           }
           _ticker.value++;
         });
 
-        // Si la cuenta de inscripción llegó a 0, refrescar una vez la pantalla
-        if (!_isRefreshingOnZero && (_regCountdown == null)) {
+        // Si la cuenta de inscripción llegó a 0, refrescar una sola vez y detener el timer
+        if (!_isRefreshingOnZero && (_regCountdown != null && _regCountdown == 0)) {
           _isRefreshingOnZero = true;
           final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
           final fulbitoProvider = Provider.of<FulbitoProvider>(context, listen: false);
@@ -1098,17 +1213,29 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
               authProvider.token!,
             );
           }
-          final updated = fulbitoProvider.currentFulbito?.registrationStatus;
-          if (updated != null) {
-            setState(() {
-              _regDeadline = null;
-              _invDeadline = null;
-              _regCountdown = null;
-              _invCountdown = null;
-            });
-            _ensureTimersFromStatus(updated);
-          }
+          setState(() {
+            _regDeadline = null;
+            _regCountdown = null;
+          });
           _isRefreshingOnZero = false;
+          break;
+        }
+
+        // Si la cuenta de invitaciones llegó a 0, refrescar para traer invitation_open true
+        if (_invCountdown != null && _invCountdown == 0) {
+          final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+          if (authProvider.token != null) {
+            await Provider.of<FulbitoProvider>(context, listen: false).loadFulbitoDetails(
+              widget.fulbito,
+              authProvider.phoneNumber ?? '',
+              authProvider.token!,
+            );
+          }
+          setState(() {
+            _invDeadline = null;
+            _invCountdown = null;
+          });
+          // no break; permitimos que el otro timer (si existe) continúe
         }
       }
     });
