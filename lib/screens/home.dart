@@ -24,24 +24,29 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   int _refreshCooldown = 0;
   Timer? _refreshTimer;
+  int? _nextEventSeconds;
+  Timer? _nextEventTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 2, vsync: this);
     
     // Cargar perfil al iniciar
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
       final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      final invitationsProvider = Provider.of<InvitationsProvider>(context, listen: false);
       
       if (authProvider.token != null) {
         profileProvider.loadProfile(authProvider.token!);
-        Provider.of<InvitationsProvider>(context, listen: false).load(authProvider.token!);
+        await invitationsProvider.load(authProvider.token!);
+        _updateNextEventFromProvider();
       }
     });
   }
@@ -50,7 +55,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void dispose() {
     _tabController.dispose();
     _refreshTimer?.cancel();
+    _nextEventTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      final authProv = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+      if (authProv.token != null) {
+        try {
+          await Provider.of<InvitationsProvider>(context, listen: false).load(authProv.token!);
+          _updateNextEventFromProvider();
+        } catch (_) {}
+      }
+    }
   }
 
   @override
@@ -129,11 +149,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
           
-          const SizedBox(width: 12),
-
-          // Botón Recargar o contador
-          _buildRefreshControl(),
-          
           // Foto de perfil
           Consumer<ProfileProvider>(
             builder: (context, profileProvider, child) {
@@ -173,46 +188,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildRefreshControl() {
-    if (_refreshCooldown > 0) {
-      return Container(
-        width: 40,
-        height: 40,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.3)),
-        ),
-        child: Text(
-          '$_refreshCooldown',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      );
-    }
-
-    return GestureDetector(
-      onTap: _handleRefreshTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.3)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.refresh, color: Colors.white, size: 20),
-      ),
-    );
-  }
-
   void _handleRefreshTap() async {
     if (_refreshCooldown > 0) return;
 
@@ -220,6 +195,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if (authProv.token != null) {
       // Recargar invitaciones/fulbitos (GET all)
       await Provider.of<InvitationsProvider>(context, listen: false).load(authProv.token!);
+      _updateNextEventFromProvider();
       // También podemos refrescar el perfil si fuera necesario
       // await Provider.of<ProfileProvider>(context, listen: false).loadProfile(authProv.token!);
     }
@@ -247,6 +223,64 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     });
   }
 
+  void _updateNextEventFromProvider() {
+    try {
+      final invitationsProvider = Provider.of<InvitationsProvider>(context, listen: false);
+      final int? nextEvent = invitationsProvider.fulbitosData.nextEvent;
+      if (nextEvent != null && nextEvent > 0 && nextEvent < 3500) {
+        // Añadimos 1 segundo de colchón
+        _startNextEventTimer(nextEvent + 1);
+      } else {
+        _stopNextEventTimer();
+      }
+    } catch (_) {}
+  }
+
+  void _startNextEventTimer(int seconds) {
+    _nextEventTimer?.cancel();
+    setState(() {
+      _nextEventSeconds = seconds;
+    });
+    _nextEventTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      setState(() {
+        if (_nextEventSeconds != null) {
+          _nextEventSeconds = _nextEventSeconds! - 1;
+          if (_nextEventSeconds! <= 0) {
+            _nextEventSeconds = null;
+            t.cancel();
+            // Al llegar a cero, refrescar la data automáticamente
+            final authProv = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+            if (authProv.token != null) {
+              Provider.of<InvitationsProvider>(context, listen: false)
+                  .load(authProv.token!)
+                  .then((_) => _updateNextEventFromProvider());
+            }
+          }
+        }
+      });
+    });
+  }
+
+  void _stopNextEventTimer() {
+    _nextEventTimer?.cancel();
+    if (_nextEventSeconds != null) {
+      setState(() {
+        _nextEventSeconds = null;
+      });
+    }
+  }
+
+  String _formatCountdown(int seconds) {
+    final int m = seconds ~/ 60;
+    final int s = seconds % 60;
+    final String ss = s.toString().padLeft(2, '0');
+    return "${m}'${ss}\"";
+  }
+
   Widget _buildTabBar() {
     return Container(
       color: const Color(0xFF059669),
@@ -260,9 +294,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           fontSize: 16,
           fontWeight: FontWeight.w600,
         ),
-        tabs: const [
-          Tab(text: 'Fulbitos'),
-          Tab(text: 'Jugadores'),
+        tabs: [
+          Tab(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Fulbitos'),
+                if (_nextEventSeconds != null) ...[
+                  const SizedBox(width: 8),
+                  const Icon(Icons.timer, size: 16, color: Colors.white),
+                  const SizedBox(width: 4),
+                  Text(_formatCountdown(_nextEventSeconds!), style: const TextStyle(fontSize: 14)),
+                ],
+              ],
+            ),
+          ),
+          const Tab(text: 'Jugadores'),
         ],
       ),
     );

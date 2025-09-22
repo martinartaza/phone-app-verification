@@ -132,11 +132,13 @@ class FulbitosData {
   final List<Fulbito> myFulbitos;
   final List<Fulbito> acceptFulbitos;
   final List<Fulbito> pendingFulbitos;
+  final int? nextEvent; // segundos hasta el próximo cambio en inscripciones/invitaciones
 
   FulbitosData({
     required this.myFulbitos,
     required this.acceptFulbitos,
     required this.pendingFulbitos,
+    this.nextEvent,
   });
 
   bool get isEmpty => myFulbitos.isEmpty && acceptFulbitos.isEmpty && pendingFulbitos.isEmpty;

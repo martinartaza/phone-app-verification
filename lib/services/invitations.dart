@@ -103,11 +103,17 @@ class InvitationsService {
     final myFulbitos = mapFulbitosList((fulbitosSection['my_fulbitos'] as List<dynamic>?) ?? const []);
     final acceptFulbitos = mapFulbitosList((fulbitosSection['accept_fulbitos'] as List<dynamic>?) ?? const []);
     final pendingFulbitos = mapFulbitosList((fulbitosSection['pending_fulbitos'] as List<dynamic>?) ?? const []);
+    final int? nextEvent = fulbitosSection['next_event'] is int
+        ? fulbitosSection['next_event'] as int
+        : (fulbitosSection['next_event'] is String
+            ? int.tryParse(fulbitosSection['next_event'])
+            : null);
 
     return FulbitosData(
       myFulbitos: myFulbitos,
       acceptFulbitos: acceptFulbitos,
       pendingFulbitos: pendingFulbitos,
+      nextEvent: nextEvent,
     );
   }
 }
