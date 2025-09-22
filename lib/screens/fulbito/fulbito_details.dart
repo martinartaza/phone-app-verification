@@ -1027,13 +1027,25 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
 
   String _formatOpensAt(String opensAt) {
     try {
-      final date = DateTime.parse(opensAt);
-      final d = date.day.toString().padLeft(2, '0');
-      final m = date.month.toString().padLeft(2, '0');
-      final y = date.year.toString();
-      final hh = date.hour.toString().padLeft(2, '0');
-      final mm = date.minute.toString().padLeft(2, '0');
-      return '$d/$m/$y $hh:$mm';
+      // Ignorar el timezone. Tomar fecha y hora crudas que envía la API
+      final parts = opensAt.split('T');
+      if (parts.length < 2) return opensAt;
+      final datePart = parts[0]; // YYYY-MM-DD
+      String timePart = parts[1]; // HH:MM:SS-03:00
+      // Cortar por zona horaria (-03:00 o +XX:YY)
+      if (timePart.contains('-')) {
+        timePart = timePart.split('-')[0];
+      } else if (timePart.contains('+')) {
+        timePart = timePart.split('+')[0];
+      }
+      // Formatear DD/MM/YYYY HH:MM
+      final ymd = datePart.split('-');
+      if (ymd.length != 3) return opensAt;
+      final y = ymd[0];
+      final m = ymd[1];
+      final d = ymd[2];
+      final hhmm = timePart.substring(0, 5);
+      return '${d.padLeft(2, '0')}/${m.padLeft(2, '0')}/$y $hhmm';
     } catch (e) {
       return opensAt;
     }
