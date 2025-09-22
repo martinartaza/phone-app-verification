@@ -59,7 +59,9 @@ class MatchDayApp extends StatelessWidget {
           '/profile': (context) => const ProfileScreen(),
           '/home': (context) => const HomeScreen(),
           '/fulbito/invite-players': (context) => const InvitePlayersScreen(),
-          '/teams': (context) => const TeamsScreen(registeredPlayers: []),
+          // Ruta conservada pero no usada directamente; TeamsScreen requiere params
+          // Definida solo para evitar referencias antiguas
+          '/teams': (context) => const SizedBox.shrink(),
         },
         debugShowCheckedModeBanner: false,
       ),

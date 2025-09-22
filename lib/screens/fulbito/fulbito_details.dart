@@ -873,6 +873,8 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
                       MaterialPageRoute(
                         builder: (context) => TeamsScreen(
                           registeredPlayers: registeredPlayers,
+                          fulbitoId: fulbito.id,
+                          matchDate: fulbito.registrationStatus?.nextMatchDate ?? '',
                         ),
                       ),
                     );

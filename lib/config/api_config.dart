@@ -69,6 +69,7 @@ class ApiConfig {
   static String getFulbitoRegisterInviteUrl(int fulbitoId) => '$baseUrl$fulbitoRegisterInviteEndpoint$fulbitoId/register_invite/';
   static String getFulbitoUnregisterUrl(int fulbitoId) => '$baseUrl$fulbitoUnregisterEndpoint$fulbitoId/unregister/';
   static String getFulbitoUnregisterInviteUrl(int fulbitoId) => '$baseUrl$fulbitoUnregisterInviteEndpoint$fulbitoId/unregister_invite/';
+  static String getFulbitoTeamsUrl(int fulbitoId) => '$baseUrl/api/auth/fulbito/$fulbitoId/teams/';
   
   // WhatsApp message configuration
   static const String whatsappMessage = 'Descarga fulbito de la playstore';

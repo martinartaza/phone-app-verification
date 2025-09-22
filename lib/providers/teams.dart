@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:matchday/config/api_config.dart';
 
 class TeamsProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _players = [];
@@ -34,8 +35,9 @@ class TeamsProvider extends ChangeNotifier {
     _players = registeredPlayers.map((player) {
       print('🔄 Mapeando jugador original: $player');
       
+      // Usamos position como identificador único interno para evitar colisiones
       final mappedPlayer = {
-        'id': player['id'],
+        'id': player['position'],
         'name': player['username'] ?? '',
         'photoUrl': player['photo_url'] ?? '',
         'team': 0, // Todos empiezan sin asignar
@@ -166,7 +168,7 @@ class TeamsProvider extends ChangeNotifier {
     if (photoUrl.startsWith('http')) {
       return photoUrl;
     } else {
-      return 'http://192.168.100.150:8000$photoUrl';
+      return '${ApiConfig.baseUrl}$photoUrl';
     }
   }
 

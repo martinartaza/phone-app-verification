@@ -36,4 +36,42 @@ class FulbitoService {
       return false;
     }
   }
+
+  Future<bool> setTeams({
+    required String token,
+    required int fulbitoId,
+    required String matchDate,
+    required List<Map<String, dynamic>> players,
+  }) async {
+    try {
+      final url = Uri.parse(ApiConfig.getFulbitoTeamsUrl(fulbitoId));
+
+      final body = {
+        'match_date': matchDate,
+        'players': players,
+      };
+
+      print('🧩 API CALL - PUT /fulbito/$fulbitoId/teams/');
+      print('🧩 URL: $url');
+      print('🧩 Headers: Authorization: Bearer $token');
+      print('🧩 Body: ${jsonEncode(body)}');
+
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      print('🧩 Response Status: ${response.statusCode}');
+      print('🧩 Response Body: ${response.body}');
+
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (e) {
+      print('❌ Error setting teams: $e');
+      return false;
+    }
+  }
 }

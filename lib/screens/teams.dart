@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/auth.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/fulbito.dart';
 import '../providers/teams.dart';
 import '../widgets/dual_hexagon_chart.dart';
 
 class TeamsScreen extends StatefulWidget {
   final List<Map<String, dynamic>> registeredPlayers;
+  final int fulbitoId;
+  final String matchDate; // formato YYYY-MM-DD
   
   const TeamsScreen({
     Key? key,
     required this.registeredPlayers,
+    required this.fulbitoId,
+    required this.matchDate,
   }) : super(key: key);
 
   @override
@@ -70,6 +77,16 @@ class _TeamsScreenState extends State<TeamsScreen> {
                 
                 // Lista de jugadores
                 _buildPlayersList(teamsProvider),
+
+                const SizedBox(height: 24),
+
+                // Botón confirmar armado de equipos
+                _buildConfirmTeamsButton(),
+
+              const SizedBox(height: 12),
+
+              // Botón para enviar equipos por WhatsApp
+              _buildShareWhatsAppButton(),
               ],
             ),
           );
@@ -275,6 +292,7 @@ class _TeamsScreenState extends State<TeamsScreen> {
               alignment: alignment,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: _getColumnCrossAxisAlignment(team),
                 children: [
                   // Foto del usuario
                   Container(
@@ -391,6 +409,207 @@ class _TeamsScreenState extends State<TeamsScreen> {
         return TextAlign.right; // Texto alineado a la derecha para Team 2
       default:
         return TextAlign.center; // Texto centrado para no asignado
+    }
+  }
+
+  CrossAxisAlignment _getColumnCrossAxisAlignment(int team) {
+    switch (team) {
+      case 1:
+        return CrossAxisAlignment.start; // Foto y texto pegados a la izquierda
+      case 2:
+        return CrossAxisAlignment.end; // Foto y texto pegados a la derecha
+      default:
+        return CrossAxisAlignment.center; // Centrado cuando no está asignado
+    }
+  }
+
+  Widget _buildConfirmTeamsButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: GestureDetector(
+        onTap: () async {
+          final teamsProvider = Provider.of<TeamsProvider>(context, listen: false);
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+
+          // Construir payload
+          final playersPayload = teamsProvider.players.map((p) {
+            final teamValue = p['team'] == 1
+                ? 'team_1'
+                : p['team'] == 2
+                    ? 'team_2'
+                    : 'no_assigned';
+            return {
+              'position': p['position'],
+              'team': teamValue,
+            };
+          }).toList();
+
+          final token = auth.token ?? '';
+          if (token.isEmpty) {
+            debugPrint('❌ Sin token, no se puede enviar equipos');
+            return;
+          }
+
+          final service = FulbitoService();
+          final ok = await service.setTeams(
+            token: token,
+            fulbitoId: widget.fulbitoId,
+            matchDate: widget.matchDate,
+            players: playersPayload,
+          );
+
+          if (ok && mounted) {
+            debugPrint('✅ Equipos guardados');
+            await showDialog(
+              context: context,
+              builder: (context) {
+                return AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  title: const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Color(0xFF10B981)),
+                      SizedBox(width: 8),
+                      Text('Equipos guardados'),
+                    ],
+                  ),
+                  content: const Text('El armado de equipos se guardó correctamente.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                );
+              },
+            );
+          } else {
+            debugPrint('❌ Error al guardar equipos');
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Error al guardar equipos')),
+            );
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFEC4899), Color(0xFF6366F1)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF6366F1).withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Center(
+            child: Text(
+              'Equipo armado',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShareWhatsAppButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: GestureDetector(
+        onTap: () async {
+          final teamsProvider = Provider.of<TeamsProvider>(context, listen: false);
+          final team1Names = teamsProvider.getPlayersByTeam(1).map((p) => p['name'] as String).toList();
+          final team2Names = teamsProvider.getPlayersByTeam(2).map((p) => p['name'] as String).toList();
+
+          final message = _composeWhatsAppMessage(team1Names, team2Names);
+          await _openWhatsApp(message);
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF25D366),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF25D366).withOpacity(0.25),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.chat, color: Colors.white),
+                SizedBox(width: 8),
+                Text(
+                  'Enviar equipo a WhatsApp',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _composeWhatsAppMessage(List<String> team1, List<String> team2) {
+    final buffer = StringBuffer();
+    buffer.writeln('Equipo 1:');
+    for (final name in team1) {
+      buffer.writeln(name);
+    }
+    buffer.writeln('');
+    buffer.writeln('Equipo 2:');
+    for (final name in team2) {
+      buffer.writeln(name);
+    }
+    return buffer.toString().trimRight();
+  }
+
+  Future<void> _openWhatsApp(String message) async {
+    // Abrir selector de chat con mensaje prellenado
+    final url = 'https://wa.me/?text=${Uri.encodeComponent(message)}';
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback a WhatsApp Web
+        final webUrl = 'https://web.whatsapp.com/send?text=${Uri.encodeComponent(message)}';
+        final webUri = Uri.parse(webUrl);
+        if (await canLaunchUrl(webUri)) {
+          await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No se pudo abrir WhatsApp')), 
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al abrir WhatsApp: $e')),
+      );
     }
   }
 }
