@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth.dart' as auth_provider;
@@ -25,6 +26,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _refreshCooldown = 0;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -46,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void dispose() {
     _tabController.dispose();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 
@@ -126,6 +130,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
           
           const SizedBox(width: 12),
+
+          // Botón Recargar o contador
+          _buildRefreshControl(),
           
           // Foto de perfil
           Consumer<ProfileProvider>(
@@ -164,6 +171,80 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
       ),
     );
+  }
+
+  Widget _buildRefreshControl() {
+    if (_refreshCooldown > 0) {
+      return Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withOpacity(0.3)),
+        ),
+        child: Text(
+          '$_refreshCooldown',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: _handleRefreshTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.refresh, color: Colors.white, size: 20),
+      ),
+    );
+  }
+
+  void _handleRefreshTap() async {
+    if (_refreshCooldown > 0) return;
+
+    final authProv = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+    if (authProv.token != null) {
+      // Recargar invitaciones/fulbitos (GET all)
+      await Provider.of<InvitationsProvider>(context, listen: false).load(authProv.token!);
+      // También podemos refrescar el perfil si fuera necesario
+      // await Provider.of<ProfileProvider>(context, listen: false).loadProfile(authProv.token!);
+    }
+
+    _startRefreshCooldown();
+  }
+
+  void _startRefreshCooldown() {
+    setState(() {
+      _refreshCooldown = 10;
+    });
+
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _refreshCooldown = (_refreshCooldown - 1).clamp(0, 10);
+        if (_refreshCooldown == 0) {
+          timer.cancel();
+        }
+      });
+    });
   }
 
   Widget _buildTabBar() {
