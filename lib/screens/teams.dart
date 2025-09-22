@@ -464,22 +464,53 @@ class _TeamsScreenState extends State<TeamsScreen> {
             await showDialog(
               context: context,
               builder: (context) {
-                return AlertDialog(
+                return Dialog(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  title: const Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Color(0xFF10B981)),
-                      SizedBox(width: 8),
-                      Text('Equipos guardados'),
-                    ],
-                  ),
-                  content: const Text('El armado de equipos se guardó correctamente.'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('OK'),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFFDF6),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF10B981), width: 2),
                     ),
-                  ],
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 40),
+                        const SizedBox(height: 12),
+                        const Text(
+                          '¡Equipos guardados!',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF065F46),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'El armado de equipos se guardó correctamente.',
+                          style: TextStyle(fontSize: 14, color: Color(0xFF065F46)),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 44,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                            child: const Text('OK'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             );

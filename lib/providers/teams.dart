@@ -35,18 +35,29 @@ class TeamsProvider extends ChangeNotifier {
     _players = registeredPlayers.map((player) {
       print('🔄 Mapeando jugador original: $player');
       
+      // Mapear equipo desde API: team_1 → 1, team_2 → 2, no_assigned/otros → 0
+      final String apiTeam = (player['team'] ?? '').toString().trim().toLowerCase();
+      int internalTeam = 0;
+      if (apiTeam == 'team_1') {
+        internalTeam = 1;
+      } else if (apiTeam == 'team_2') {
+        internalTeam = 2;
+      } else {
+        internalTeam = 0;
+      }
+
       // Usamos position como identificador único interno para evitar colisiones
       final mappedPlayer = {
         'id': player['position'],
         'name': player['username'] ?? '',
         'photoUrl': player['photo_url'] ?? '',
-        'team': 0, // Todos empiezan sin asignar
+        'team': internalTeam,
         'position': player['position'] ?? 0,
         'registeredAt': player['registered_at'] ?? '',
         'averageSkills': player['averageSkills'], // ¡IMPORTANTE: Conservar averageSkills!
       };
       
-      print('🔄 Jugador mapeado: $mappedPlayer');
+      print('🔄 Jugador mapeado: $mappedPlayer (apiTeam="$apiTeam" → internal=$internalTeam)');
       return mappedPlayer;
     }).toList();
     
