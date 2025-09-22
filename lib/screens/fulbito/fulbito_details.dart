@@ -22,14 +22,22 @@ class FulbitoDetailsScreen extends StatefulWidget {
   State<FulbitoDetailsScreen> createState() => _FulbitoDetailsScreenState();
 }
 
-class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with SingleTickerProviderStateMixin {
+class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
+  int? _regCountdown; // segundos hasta abrir inscripción
+  int? _invCountdown; // segundos hasta abrir invitaciones
+  DateTime? _regDeadline;
+  DateTime? _invDeadline;
+  late final ValueNotifier<int> _ticker;
+  bool _isRefreshingOnZero = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Siempre 3 tabs: Modificación (solo admin), Detalles, Inscripción
     _tabController = TabController(length: 3, vsync: this);
+    _ticker = ValueNotifier<int>(0);
     
     // Empezar en el tab "Detalles" (índice 1)
     _tabController.index = 1;
@@ -52,7 +60,23 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
   @override
   void dispose() {
     _tabController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+      final fulbitoProvider = Provider.of<FulbitoProvider>(context, listen: false);
+      if (authProvider.token != null) {
+        await fulbitoProvider.loadFulbitoDetails(
+          widget.fulbito,
+          authProvider.phoneNumber ?? '',
+          authProvider.token!,
+        );
+      }
+    }
   }
 
   @override
@@ -330,7 +354,6 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
 
         final status = fulbito.registrationStatus!;
         final isRegistrationOpen = status.registrationOpen;
-        final isUserRegistered = status.userPosition != null;
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -338,18 +361,16 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Estado de inscripción
-              _buildInscriptionStatusCard(status, isRegistrationOpen, isUserRegistered),
+              _buildInscriptionStatusCard(status, isRegistrationOpen),
               
               const SizedBox(height: 24),
               
-              // Contenido según el estado
-              if (!isRegistrationOpen) ...[
-                _buildRegistrationClosedContent(status),
-              ] else if (isUserRegistered) ...[
-                _buildUserRegisteredContent(status),
-              ] else ...[
-                _buildRegistrationOpenContent(status),
-              ],
+          // Contenido según el estado (simplificado)
+          if (!isRegistrationOpen) ...[
+            _buildRegistrationClosedContent(status),
+          ] else ...[
+            _buildRegistrationOpenContent(status),
+          ],
             ],
           ),
         );
@@ -357,7 +378,8 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
     );
   }
 
-  Widget _buildInscriptionStatusCard(RegistrationStatus status, bool isOpen, bool isRegistered) {
+  Widget _buildInscriptionStatusCard(RegistrationStatus status, bool isOpen) {
+    _ensureTimersFromStatus(status);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -392,7 +414,7 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
           ),
           const SizedBox(height: 12),
           Text(
-            'Próximo partido: ${status.nextMatchDate} ${status.nextMatchHour}',
+            'Próximo partido: ${_formatNextMatch(status)}',
             style: const TextStyle(
               fontSize: 16,
               color: Color(0xFF374151),
@@ -406,7 +428,7 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
               color: Color(0xFF6B7280),
             ),
           ),
-          if (isRegistered) ...[
+          if (status.userPosition != null) ...[
             const SizedBox(height: 8),
             Text(
               'Tu posición: ${status.userPosition}',
@@ -461,91 +483,48 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
   }
 
   Widget _buildRegistrationClosedContent(RegistrationStatus status) {
-    return Consumer<FulbitoInscriptionProvider>(
-      builder: (context, inscriptionProvider, child) {
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.schedule,
+            size: 48,
+            color: Color(0xFF6B7280),
           ),
-          child: Column(
-            children: [
-              const Icon(
-                Icons.schedule,
-                size: 48,
-                color: Color(0xFF6B7280),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'La inscripción se inicia en:',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF374151),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                inscriptionProvider.formatRegistrationStartTime(status.opensAt),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF8B5CF6),
-                ),
-              ),
-            ],
+          const SizedBox(height: 16),
+          const Text(
+            'Inscripción CERRADA hasta:',
+            style: TextStyle(fontSize: 16, color: Color(0xFF374151)),
           ),
-        );
-      },
+          const SizedBox(height: 8),
+          Text(
+            _formatOpensAt(status.opensAt),
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF8B5CF6),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildRegistrationOpenContent(RegistrationStatus status) {
     return Column(
       children: [
-        // Botón de inscripción
-        Consumer<FulbitoInscriptionProvider>(
-          builder: (context, inscriptionProvider, child) {
-            return SizedBox(
-              width: double.infinity,
-              height: 60,
-              child: ElevatedButton(
-                onPressed: inscriptionProvider.isLoading 
-                    ? null 
-                    : () => inscriptionProvider.registerForFulbito(context, widget.fulbito.id),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B5CF6),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 5,
-                ),
-                child: inscriptionProvider.isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'INSCRIBIRSE',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
-            );
-          },
-        ),
-        
-        const SizedBox(height: 24),
-        
-        // Botón Armar Equipos
+        // Botón Armar Equipos (sin inscripción aquí)
         _buildCreateTeamsButton(),
-        
         const SizedBox(height: 24),
-        
-        // Lista de jugadores inscritos
-        _buildRegisteredPlayersList(status),
+        // Lista de jugadores en solo lectura
+        _buildRegisteredPlayersList(status, readOnly: true),
       ],
     );
   }
@@ -655,7 +634,7 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
     );
   }
 
-  Widget _buildRegisteredPlayersList(RegistrationStatus status) {
+  Widget _buildRegisteredPlayersList(RegistrationStatus status, {bool readOnly = false}) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -691,117 +670,85 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
               ),
             )
           else
-            ...status.players.map((player) => _buildRegisteredPlayerItem(player)),
+            ...status.players.map((player) => _buildRegisteredPlayerItemReadOnly(player)),
         ],
       ),
     );
   }
 
-  Widget _buildRegisteredPlayerItem(Map<String, dynamic> player) {
-    return Consumer<FulbitoInscriptionProvider>(
-      builder: (context, inscriptionProvider, child) {
-        final position = player['position'] ?? 0;
-        final username = player['username'] ?? '';
-        final photoUrl = player['photo_url'] ?? '';
-        final registeredAt = player['registered_at'] ?? '';
-        final isSelected = inscriptionProvider.selectedPlayer?['id'] == player['id'];
-
-        return GestureDetector(
-          onTap: () {
-            inscriptionProvider.selectPlayer(isSelected ? null : player);
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFFF3E8FF) : const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isSelected ? const Color(0xFF8B5CF6) : const Color(0xFFE2E8F0),
-                width: isSelected ? 2 : 1,
+  Widget _buildRegisteredPlayerItemReadOnly(Map<String, dynamic> player) {
+    final position = player['position'] ?? 0;
+    final username = player['username'] ?? '';
+    final photoUrl = player['photo_url'] ?? '';
+    final registeredAt = player['registered_at'] ?? '';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: const BoxDecoration(
+              color: Color(0xFF8B5CF6),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                '$position',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ),
-            child: Row(
-              children: [
-                // Posición
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFF8B5CF6),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '$position',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                
-                // Foto
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.grey.shade200,
-                    border: isSelected ? Border.all(color: const Color(0xFF8B5CF6), width: 2) : null,
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: photoUrl.isNotEmpty
-                      ? Image.network(
-                          '${ApiConfig.baseUrl}$photoUrl',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(Icons.person, color: Colors.grey);
-                          },
-                        )
-                      : const Icon(Icons.person, color: Colors.grey),
-                ),
-                const SizedBox(width: 12),
-                
-                // Nombre
-                Expanded(
-                  child: Text(
-                    username,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                      color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFF374151),
-                    ),
-                  ),
-                ),
-                
-                // Hora de inscripción
-                if (registeredAt.isNotEmpty)
-                  Text(
-                    inscriptionProvider.formatTime(registeredAt),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFF6B7280),
-                    ),
-                  ),
-                
-                // Icono de selección
-                if (isSelected) ...[
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.check_circle,
-                    color: Color(0xFF8B5CF6),
-                    size: 20,
-                  ),
-                ],
-              ],
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.grey.shade200,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: photoUrl.isNotEmpty
+                ? Image.network(
+                    '${ApiConfig.baseUrl}$photoUrl',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.person, color: Colors.grey);
+                    },
+                  )
+                : const Icon(Icons.person, color: Colors.grey),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              username,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF374151),
+              ),
             ),
           ),
-        );
-      },
+          if (registeredAt.isNotEmpty)
+            Text(
+              _formatTime(registeredAt),
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -811,6 +758,106 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
       return time.substring(0, 5); // HH:MM
     }
     return time;
+  }
+
+  String _formatNextMatch(RegistrationStatus status) {
+    try {
+      if (status.nextMatchDate.isEmpty || status.nextMatchHour.isEmpty) return '${status.nextMatchDate} ${status.nextMatchHour}';
+      final dt = DateTime.parse('${status.nextMatchDate}T${status.nextMatchHour}');
+      final d = dt.day.toString().padLeft(2, '0');
+      final m = dt.month.toString().padLeft(2, '0');
+      final y = dt.year.toString();
+      final hh = dt.hour.toString().padLeft(2, '0');
+      final mm = dt.minute.toString().padLeft(2, '0');
+      return '$d/$m/$y $hh:$mm';
+    } catch (e) {
+      return '${status.nextMatchDate} ${status.nextMatchHour}';
+    }
+  }
+
+  String _formatOpensAt(String opensAt) {
+    try {
+      final date = DateTime.parse(opensAt);
+      final d = date.day.toString().padLeft(2, '0');
+      final m = date.month.toString().padLeft(2, '0');
+      final y = date.year.toString();
+      final hh = date.hour.toString().padLeft(2, '0');
+      final mm = date.minute.toString().padLeft(2, '0');
+      return '$d/$m/$y $hh:$mm';
+    } catch (e) {
+      return opensAt;
+    }
+  }
+
+  void _ensureTimersFromStatus(RegistrationStatus status) {
+    // Registrar cuenta regresiva si faltan menos de ~58 min y más de 0
+    if (_regCountdown == null && status.timeUntilOpen > 0 && status.timeUntilOpen < 3500) {
+      // Colchón +2s para asegurar que el backend ya aplicó el cambio
+      _startCountdown(isRegistration: true, seconds: status.timeUntilOpen + 2);
+    }
+    if (_invCountdown == null && status.invitationTimeUntilOpen > 0 && status.invitationTimeUntilOpen < 3500) {
+      _startCountdown(isRegistration: false, seconds: status.invitationTimeUntilOpen + 1);
+    }
+  }
+
+  void _startCountdown({required bool isRegistration, required int seconds}) {
+    if (isRegistration) {
+      _regCountdown = seconds;
+      _regDeadline = DateTime.now().add(Duration(seconds: seconds));
+    } else {
+      _invCountdown = seconds;
+      _invDeadline = DateTime.now().add(Duration(seconds: seconds));
+    }
+    // Ticker para redibujar
+    Future.microtask(() async {
+      while (mounted && ((_regCountdown ?? 0) > 0 || (_invCountdown ?? 0) > 0)) {
+        await Future.delayed(const Duration(seconds: 1));
+        setState(() {
+          if (_regDeadline != null) {
+            _regCountdown = _regDeadline!.difference(DateTime.now()).inSeconds;
+            if (_regCountdown! <= 0) _regCountdown = null;
+          }
+          if (_invDeadline != null) {
+            _invCountdown = _invDeadline!.difference(DateTime.now()).inSeconds;
+            if (_invCountdown! <= 0) _invCountdown = null;
+          }
+          _ticker.value++;
+        });
+
+        // Si la cuenta de inscripción llegó a 0, refrescar una vez la pantalla
+        if (!_isRefreshingOnZero && (_regCountdown == null)) {
+          _isRefreshingOnZero = true;
+          final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+          final fulbitoProvider = Provider.of<FulbitoProvider>(context, listen: false);
+          if (authProvider.token != null) {
+            await fulbitoProvider.loadFulbitoDetails(
+              widget.fulbito,
+              authProvider.phoneNumber ?? '',
+              authProvider.token!,
+            );
+          }
+          final updated = fulbitoProvider.currentFulbito?.registrationStatus;
+          if (updated != null) {
+            setState(() {
+              _regDeadline = null;
+              _invDeadline = null;
+              _regCountdown = null;
+              _invCountdown = null;
+            });
+            _ensureTimersFromStatus(updated);
+          }
+          _isRefreshingOnZero = false;
+        }
+      }
+    });
+  }
+
+  String _formatCountdown(int seconds) {
+    if (seconds < 0) seconds = 0;
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    final ss = s.toString().padLeft(2, '0');
+    return "$m'${ss}\"";
   }
 
   Widget _buildDetailRow(String label, String value) {
