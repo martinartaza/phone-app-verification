@@ -933,19 +933,22 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
             GestureDetector(
               onTap: () async {
                 if (authProv.token != null) {
-                  final unregisterProvider = Provider.of<UnregisterGuestProvider>(context, listen: false);
-                  await unregisterProvider.unregisterGuest(
-                    token: authProv.token!,
-                    fulbitoId: widget.fulbito.id,
-                    guestName: username,
-                    context: context,
-                  );
-                  if (mounted) {
-                    await Provider.of<FulbitoProvider>(context, listen: false).loadFulbitoDetails(
-                      widget.fulbito,
-                      authProv.phoneNumber ?? '',
-                      authProv.token!,
+                  final bool? confirmed = await _showConfirmUnregisterGuest(username);
+                  if (confirmed == true) {
+                    final unregisterProvider = Provider.of<UnregisterGuestProvider>(context, listen: false);
+                    await unregisterProvider.unregisterGuest(
+                      token: authProv.token!,
+                      fulbitoId: widget.fulbito.id,
+                      guestName: username,
+                      context: context,
                     );
+                    if (mounted) {
+                      await Provider.of<FulbitoProvider>(context, listen: false).loadFulbitoDetails(
+                        widget.fulbito,
+                        authProv.phoneNumber ?? '',
+                        authProv.token!,
+                      );
+                    }
                   }
                 }
               },
@@ -969,6 +972,33 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
           ],
         ],
       ),
+    );
+  }
+
+  Future<bool?> _showConfirmUnregisterGuest(String guestName) async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text(
+            'Desinscribir invitado',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: Text('¿Deseas desinscribir a "$guestName"? Esta acción no se puede deshacer.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white),
+              child: const Text('Desinscribir'),
+            ),
+          ],
+        );
+      },
     );
   }
 
