@@ -72,7 +72,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
     if (success && mounted) {
       _showMessage('✅ Verificación exitosa', isError: false);
-      Navigator.pushReplacementNamed(context, '/profile');
+      Navigator.pushReplacementNamed(context, '/profile', arguments: {'fromVerification': true});
     } else if (mounted) {
       // Limpiar campos en caso de error
       for (var controller in _controllers) {

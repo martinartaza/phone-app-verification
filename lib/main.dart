@@ -56,7 +56,10 @@ class MatchDayApp extends StatelessWidget {
         home: const SplashScreen(),
         routes: {
           '/phone': (context) => const PhoneInputScreen(),
-          '/profile': (context) => const ProfileScreen(),
+          '/profile': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+            return ProfileScreen(fromVerification: args?['fromVerification'] ?? false);
+          },
           '/home': (context) => const HomeScreen(),
           '/fulbito/invite-players': (context) => const InvitePlayersScreen(),
           // Ruta conservada pero no usada directamente; TeamsScreen requiere params

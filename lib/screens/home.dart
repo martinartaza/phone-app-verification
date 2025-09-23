@@ -75,11 +75,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      floatingActionButton: _buildAddButton(),
-      body: SafeArea(
-        child: Column(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        // No permitir volver atrás desde home
+        // Esto evita que el usuario regrese a phone_input o verification
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        floatingActionButton: _buildAddButton(),
+        body: SafeArea(
+          child: Column(
           children: [
             // Header similar a WhatsApp
             _buildHeader(),
@@ -98,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
           ],
+          ),
         ),
       ),
     );
