@@ -17,6 +17,7 @@ import 'providers/registration.dart';
 import 'providers/teams.dart';
 import 'providers/invite_guest_player.dart';
 import 'providers/unregister_guest.dart';
+import 'providers/sync_provider.dart';
 import 'screens/fulbito/invite_players.dart';
 import 'screens/teams.dart';
 
@@ -45,6 +46,7 @@ class MatchDayApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TeamsProvider()),
         ChangeNotifierProvider(create: (_) => InviteGuestPlayerProvider()),
         ChangeNotifierProvider(create: (_) => UnregisterGuestProvider()),
+        ChangeNotifierProvider(create: (_) => SyncProvider()),
       ],
       child: MaterialApp(
         title: 'MatchDay',
@@ -93,6 +95,8 @@ class _SplashScreenState extends State<SplashScreen> {
     if (mounted) {
       final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
       final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+      final invitationsProvider = Provider.of<InvitationsProvider>(context, listen: false);
       
       // Esperar a que termine la inicialización del AuthProvider
       while (!authProvider.isInitialized) {
@@ -104,6 +108,25 @@ class _SplashScreenState extends State<SplashScreen> {
         // Verificar si tiene perfil completo
         if (authProvider.token != null) {
           await profileProvider.loadProfile(authProvider.token!);
+          
+          // Inicializar sincronización si tiene perfil completo
+          final hasProfile = profileProvider.profile.name.isNotEmpty;
+          if (hasProfile) {
+            // Configurar InvitationsProvider para usar SyncProvider
+            invitationsProvider.setSyncProvider(syncProvider);
+            
+            // Cargar estado de sincronización
+            await syncProvider.loadSyncState();
+            
+            // Realizar sincronización inicial si es necesario
+            if (syncProvider.lastSyncTimestamp == null) {
+              print('🔄 [SplashScreen] Performing initial sync...');
+              await syncProvider.performInitialSync(authProvider.token!);
+            } else {
+              print('🔄 [SplashScreen] Performing incremental sync...');
+              await syncProvider.performIncrementalSync(authProvider.token!);
+            }
+          }
         }
         
         // Si tiene perfil completo, ir al home, sino al perfil
@@ -185,23 +208,46 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 16),
             
             // Loading text
-            Consumer<auth_provider.AuthProvider>(
-              builder: (context, authProvider, child) {
+            Consumer2<auth_provider.AuthProvider, SyncProvider>(
+              builder: (context, authProvider, syncProvider, child) {
                 String statusText = 'Verificando datos locales...';
+                
                 if (authProvider.isLoading) {
                   statusText = 'Verificando con el servidor...';
                 } else if (authProvider.isInitialized) {
-                  statusText = authProvider.isAuthenticated 
-                      ? 'Sesión válida, ir al Home ✅' 
-                      : 'Sin sesión válida, ir al login...';
+                  if (authProvider.isAuthenticated) {
+                    if (syncProvider.isInitialLoad) {
+                      statusText = 'Sincronizando datos iniciales...';
+                    } else if (syncProvider.isLoading) {
+                      statusText = 'Actualizando datos...';
+                    } else {
+                      statusText = 'Sesión válida, ir al Home ✅';
+                    }
+                  } else {
+                    statusText = 'Sin sesión válida, ir al login...';
+                  }
                 }
                 
-                return Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                return Column(
+                  children: [
+                    Text(
+                      statusText,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    if (syncProvider.isPollingActive && syncProvider.currentPollingInfo != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Polling activo: ${syncProvider.currentPollingInfo!.reason}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ],
                 );
               },
             ),

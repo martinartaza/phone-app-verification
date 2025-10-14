@@ -33,9 +33,12 @@ class ApiConfig {
   // API Endpoints
   static const String createUserEndpoint = '/api/v2/auth/request-code/';
   static const String verifyUserEndpoint = '/api/v2/auth/verify/';
-  static const String refreshTokenEndpoint = '/api/auth/refresh-token/';
+  static const String refreshTokenEndpoint = '/api/v2/auth/refresh-token/';
+  static const String getProfileEndpoint = '/api/v2/user/profile/';
   static const String updateProfileEndpoint = '/api/v2/user/profile/update/';
-  static const String invitationsEndpoint = '/api/auth/invitation/all/';
+  static const String syncInitialEndpoint = '/api/v2/sync/initial/';
+  static const String syncEndpoint = '/api/v2/sync/';
+  static const String invitationsEndpoint = '/api/v2/network/connections/';
   static const String votePlayerEndpoint = '/api/auth/players/';
   static const String getPlayerDetailsEndpoint = '/api/auth/players/';
   static const String setPlayerOpinionEndpoint = '/api/auth/players/';
@@ -58,7 +61,12 @@ class ApiConfig {
   static String get createUserUrl => '$baseUrl$createUserEndpoint';
   static String get verifyUserUrl => '$baseUrl$verifyUserEndpoint';
   static String get refreshTokenUrl => '$baseUrl$refreshTokenEndpoint';
+  static String get getProfileUrl => '$baseUrl$getProfileEndpoint';
   static String get updateProfileUrl => '$baseUrl$updateProfileEndpoint';
+  static String getSyncInitialUrl(int nextPage) => '$baseUrl$syncInitialEndpoint?next_page=$nextPage';
+  static String getSyncUrl([String? lastSync]) => lastSync != null 
+      ? '$baseUrl$syncEndpoint?last_sync=$lastSync'
+      : '$baseUrl$syncEndpoint';
   static String get invitationsUrl => '$baseUrl$invitationsEndpoint';
   static String getVotePlayerUrl(String uuid) => '$baseUrl$votePlayerEndpoint$uuid/opinion/';
   static String getPlayerDetailsUrl(String uuid) => '$baseUrl$getPlayerDetailsEndpoint$uuid/opinion/';

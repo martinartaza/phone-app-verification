@@ -5,9 +5,11 @@ import '../services/invitation_status.dart';
 import '../services/fulbito_status.dart';
 import '../services/invite_player.dart';
 import '../widgets/maintenance_modal.dart';
+import 'sync_provider.dart';
 
 class InvitationsProvider with ChangeNotifier {
   final InvitationsService _service = InvitationsService();
+  SyncProvider? _syncProvider;
 
   bool _isLoading = false;
   String? _error;
@@ -22,7 +24,55 @@ class InvitationsProvider with ChangeNotifier {
   bool get isNetworkEmpty => _networkData.network.isEmpty && _networkData.invitationPending.isEmpty;
   bool get isFulbitosEmpty => _fulbitosData.isEmpty;
 
+  /// Configurar el SyncProvider para obtener datos de sincronización
+  void setSyncProvider(SyncProvider syncProvider) {
+    _syncProvider = syncProvider;
+    // Escuchar cambios en el SyncProvider
+    _syncProvider!.addListener(_onSyncDataChanged);
+  }
+
+  /// Callback cuando cambian los datos de sincronización
+  void _onSyncDataChanged() {
+    if (_syncProvider != null) {
+      _updateDataFromSync();
+    }
+  }
+
+  /// Actualizar datos desde el SyncProvider
+  void _updateDataFromSync() {
+    if (_syncProvider!.hasNetworkData) {
+      // Convertir datos de sincronización a formato legacy
+      _networkData = _convertSyncNetworkData(_syncProvider!.networkData!);
+    }
+    
+    if (_syncProvider!.hasFulbitosData) {
+      // Convertir datos de sincronización a formato legacy
+      _fulbitosData = _convertSyncFulbitosData(_syncProvider!.fulbitosData!);
+    }
+    
+    notifyListeners();
+  }
+
+  /// Convertir SyncNetworkData a NetworkData (formato legacy)
+  NetworkData _convertSyncNetworkData(dynamic syncNetworkData) {
+    // TODO: Implementar conversión cuando tengamos la estructura exacta
+    return NetworkData(network: const [], invitationPending: const []);
+  }
+
+  /// Convertir SyncFulbitosData a FulbitosData (formato legacy)
+  FulbitosData _convertSyncFulbitosData(dynamic syncFulbitosData) {
+    // TODO: Implementar conversión cuando tengamos la estructura exacta
+    return FulbitosData(myFulbitos: const [], acceptFulbitos: const [], pendingFulbitos: const []);
+  }
+
   Future<void> load(String token) async {
+    // Si tenemos SyncProvider, usar datos de sincronización
+    if (_syncProvider != null) {
+      _updateDataFromSync();
+      return;
+    }
+
+    // Fallback al método anterior si no hay SyncProvider
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -262,6 +312,13 @@ class InvitationsProvider with ChangeNotifier {
         'isError': false,
       };
     }
+  }
+
+  @override
+  void dispose() {
+    // Limpiar listener del SyncProvider
+    _syncProvider?.removeListener(_onSyncDataChanged);
+    super.dispose();
   }
 }
 

@@ -218,4 +218,54 @@ class StorageService {
       return false;
     }
   }
+
+  // ========== MÉTODOS DE SINCRONIZACIÓN ==========
+
+  /// Guardar ETag de sincronización
+  static Future<void> saveSyncEtag(String? etag) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (etag != null) {
+      await prefs.setString('sync_etag', etag);
+      print('💾 Sync ETag guardado: $etag');
+    } else {
+      await prefs.remove('sync_etag');
+      print('💾 Sync ETag eliminado');
+    }
+  }
+
+  /// Obtener ETag de sincronización
+  static Future<String?> getSyncEtag() async {
+    final prefs = await SharedPreferences.getInstance();
+    final etag = prefs.getString('sync_etag');
+    print('💾 Sync ETag cargado: $etag');
+    return etag;
+  }
+
+  /// Guardar timestamp de última sincronización
+  static Future<void> saveLastSyncTimestamp(String? timestamp) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (timestamp != null) {
+      await prefs.setString('last_sync_timestamp', timestamp);
+      print('💾 Last sync timestamp guardado: $timestamp');
+    } else {
+      await prefs.remove('last_sync_timestamp');
+      print('💾 Last sync timestamp eliminado');
+    }
+  }
+
+  /// Obtener timestamp de última sincronización
+  static Future<String?> getLastSyncTimestamp() async {
+    final prefs = await SharedPreferences.getInstance();
+    final timestamp = prefs.getString('last_sync_timestamp');
+    print('💾 Last sync timestamp cargado: $timestamp');
+    return timestamp;
+  }
+
+  /// Limpiar estado de sincronización
+  static Future<void> clearSyncState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('sync_etag');
+    await prefs.remove('last_sync_timestamp');
+    print('💾 Estado de sincronización limpiado');
+  }
 }

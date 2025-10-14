@@ -104,9 +104,9 @@ class ProfileService {
 
   Future<UserProfile?> getProfile(String token) async {
     try {
-      final url = Uri.parse(ApiConfig.updateProfileUrl);
+      final url = Uri.parse(ApiConfig.getProfileUrl);
       
-      print('📥 API CALL - GET ${ApiConfig.updateProfileEndpoint}');
+      print('📥 API CALL - GET ${ApiConfig.getProfileEndpoint}');
       print('📥 Headers: Authorization: Bearer $token');
       
       final response = await http.get(
