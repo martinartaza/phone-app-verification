@@ -3,6 +3,7 @@ import '../models/network.dart';
 import '../services/invitations.dart';
 import '../services/invitation_status.dart';
 import '../services/fulbito_status.dart';
+import '../services/invite_player.dart';
 import '../widgets/maintenance_modal.dart';
 
 class InvitationsProvider with ChangeNotifier {
@@ -42,48 +43,60 @@ class InvitationsProvider with ChangeNotifier {
     }
   }
 
+  /// Acepta una invitación de red usando API v2
   Future<bool> acceptInvitation(String token, int invitationId) async {
     try {
-      final result = await InvitationStatusService.updateInvitationStatus(
+      print('🌐 [InvitationsProvider] Accepting network invitation: $invitationId');
+      
+      // Usar el nuevo servicio de API v2
+      final success = await InvitePlayerService.acceptConnection(
         token: token,
-        invitationId: invitationId,
-        status: 'accepted',
+        connectionId: invitationId,
       );
 
-      if (result['success']) {
+      if (success) {
+        print('✅ [InvitationsProvider] Connection accepted successfully');
         // Recargar los datos para reflejar el cambio
         await load(token);
         return true;
       } else {
-        _error = result['error'];
+        print('❌ [InvitationsProvider] Failed to accept connection');
+        _error = 'Error al aceptar invitación';
         notifyListeners();
         return false;
       }
     } catch (e) {
+      print('❌ [InvitationsProvider] Error accepting invitation: $e');
       _error = 'Error al aceptar invitación: $e';
       notifyListeners();
       return false;
     }
   }
 
+  /// Rechaza una invitación de red usando API v2
   Future<bool> rejectInvitation(String token, int invitationId) async {
     try {
-      final result = await InvitationStatusService.updateInvitationStatus(
+      print('🌐 [InvitationsProvider] Rejecting network invitation: $invitationId');
+      
+      // Usar el nuevo servicio de API v2
+      final success = await InvitePlayerService.rejectConnection(
         token: token,
-        invitationId: invitationId,
-        status: 'rejected',
+        connectionId: invitationId,
       );
 
-      if (result['success']) {
+      if (success) {
+        print('✅ [InvitationsProvider] Connection rejected successfully');
         // Recargar los datos para reflejar el cambio
         await load(token);
         return true;
       } else {
-        _error = result['error'];
+        print('❌ [InvitationsProvider] Failed to reject connection');
+        _error = 'Error al rechazar invitación';
         notifyListeners();
         return false;
       }
     } catch (e) {
+      print('❌ [InvitationsProvider] Error rejecting invitation: $e');
       _error = 'Error al rechazar invitación: $e';
       notifyListeners();
       return false;

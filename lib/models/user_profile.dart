@@ -3,6 +3,7 @@ class UserProfile {
   final int age;
   final String? photoPath;
   final String? photoUrl;
+  final String timezone;
   final Map<String, double> skills;
   final Map<String, double> averageSkills;
   final bool isGoalkeeper;
@@ -17,6 +18,7 @@ class UserProfile {
     this.age = 30,
     this.photoPath,
     this.photoUrl,
+    this.timezone = 'America/Argentina/Buenos_Aires',
     Map<String, double>? skills,
     Map<String, double>? averageSkills,
     this.isGoalkeeper = false,
@@ -47,6 +49,7 @@ class UserProfile {
     int? age,
     String? photoPath,
     String? photoUrl,
+    String? timezone,
     Map<String, double>? skills,
     Map<String, double>? averageSkills,
     bool? isGoalkeeper,
@@ -61,6 +64,7 @@ class UserProfile {
       age: age ?? this.age,
       photoPath: photoPath ?? this.photoPath,
       photoUrl: photoUrl ?? this.photoUrl,
+      timezone: timezone ?? this.timezone,
       skills: skills ?? this.skills,
       averageSkills: averageSkills ?? this.averageSkills,
       isGoalkeeper: isGoalkeeper ?? this.isGoalkeeper,
@@ -78,6 +82,7 @@ class UserProfile {
       'age': age,
       'photo_path': photoPath,
       'photo_url': photoUrl,
+      'timezone': timezone,
       'skills': skills,
       'average_skills': averageSkills,
       'is_goalkeeper': isGoalkeeper,
@@ -95,6 +100,7 @@ class UserProfile {
       age: json['age'] ?? 30,
       photoPath: json['photo_path'],
       photoUrl: json['photo_url'],
+      timezone: json['timezone'] ?? 'America/Argentina/Buenos_Aires',
       skills: Map<String, double>.from(json['skills'] ?? {}),
       averageSkills: Map<String, double>.from(json['average_skills'] ?? {}),
       isGoalkeeper: json['is_goalkeeper'] ?? false,

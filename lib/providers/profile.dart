@@ -54,6 +54,11 @@ class ProfileProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void updateTimezone(String timezone) {
+    _profile = _profile.copyWith(timezone: timezone);
+    notifyListeners();
+  }
+
   void updateSkill(String skillName, double value) {
     final updatedSkills = Map<String, double>.from(_profile.skills);
     updatedSkills[skillName] = value;

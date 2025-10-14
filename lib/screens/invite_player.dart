@@ -325,36 +325,69 @@ class _InvitePlayerScreenState extends State<InvitePlayerScreen> {
         _isLoading = false;
       });
 
-      if (result['success']) {
-        // Recargar los datos de invitaciones
-        final invitationsProvider = Provider.of<InvitationsProvider>(context, listen: false);
-        await invitationsProvider.load(token);
+      if (result != null) {
+        if (result.isSuccess) {
+          // Recargar los datos de invitaciones
+          final invitationsProvider = Provider.of<InvitationsProvider>(context, listen: false);
+          await invitationsProvider.load(token);
 
-        // Mostrar mensaje de éxito
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invitación enviada exitosamente'),
-            backgroundColor: Colors.green,
-          ),
-        );
+          // Mostrar mensaje de éxito según el tipo de respuesta
+          String successMessage = result.message;
+          if (result.message.contains('updated')) {
+            successMessage = 'Mensaje de invitación actualizado';
+          } else if (result.message.contains('Re-invitation')) {
+            successMessage = 'Re-invitación enviada exitosamente';
+          } else if (result.message.contains('automatically')) {
+            successMessage = 'Conexión aceptada automáticamente';
+          } else {
+            successMessage = 'Invitación enviada exitosamente';
+          }
 
-        // Si debe abrir WhatsApp
-        if (result['shouldOpenWhatsApp']) {
-          await _openWhatsApp(cleanedPhoneNumber, _messageController.text.trim());
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(successMessage),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          // Volver al home
+          Navigator.pop(context);
+        } else if (result.shouldOpenWhatsApp) {
+          // Usuario no encontrado - abrir WhatsApp
+          await _openWhatsApp(
+            cleanedPhoneNumber, 
+            _messageController.text.trim(),
+            result.urlFulbitoApp,
+          );
+
+          // Mostrar mensaje informativo
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Usuario no encontrado. Abriendo WhatsApp...'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+
+          // Volver al home después de abrir WhatsApp
+          Navigator.pop(context);
+        } else {
+          // Error
+          setState(() {
+            _error = result.message;
+          });
         }
-
-        // Volver al home
-        Navigator.pop(context);
       } else {
         setState(() {
-          _error = result['error'];
+          _error = 'Error de conexión con el servidor';
         });
       }
     }
   }
 
-  Future<void> _openWhatsApp(String phoneNumber, String message) async {
-    final whatsappMessage = '$message - ${ApiConfig.whatsappMessage}';
+  Future<void> _openWhatsApp(String phoneNumber, String message, String? appUrl) async {
+    // Usar la URL que devuelve el servidor o la configurada por defecto
+    final downloadUrl = appUrl ?? ApiConfig.whatsappMessage;
+    final whatsappMessage = '$message - $downloadUrl';
     
     // El número ya viene limpio desde _sendInvitation, pero por seguridad lo limpiamos de nuevo
     String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');

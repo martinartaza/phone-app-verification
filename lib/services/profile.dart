@@ -12,14 +12,22 @@ class ProfileService {
     try {
       final url = Uri.parse(ApiConfig.updateProfileUrl);
       
-      // Preparar self_perception según el formato esperado por la API (en inglés)
-      final selfPerception = {
+      // Preparar self_perception_fulbito según el formato esperado por la API v2 (en inglés)
+      final selfPerceptionFulbito = {
         'speed': profile.skills['velocidad']?.round() ?? 50,
         'stamina': profile.skills['resistencia']?.round() ?? 50,
         'shooting': profile.skills['tiro_arco']?.round() ?? 50,
         'dribbling': profile.skills['gambeta']?.round() ?? 50,
         'passing': profile.skills['pases']?.round() ?? 50,
         'defending': profile.skills['defensa']?.round() ?? 50,
+      };
+
+      // Preparar fulbito_extra_data
+      final fulbitoExtraData = {
+        'is_goalkeeper': profile.isGoalkeeper,
+        'is_forward': profile.isStriker,
+        'is_midfielder': profile.isMidfielder,
+        'is_defender': profile.isDefender,
       };
 
       http.Response response;
@@ -30,14 +38,11 @@ class ProfileService {
         
         request.headers['Authorization'] = 'Bearer $token';
         
-        // Agregar campos del perfil
-        request.fields['firstname'] = profile.name;
-        request.fields['age'] = profile.age.toString();
-        request.fields['is_goalkeeper'] = profile.isGoalkeeper.toString();
-        request.fields['is_forward'] = profile.isStriker.toString();
-        request.fields['is_midfielder'] = profile.isMidfielder.toString();
-        request.fields['is_defender'] = profile.isDefender.toString();
-        request.fields['self_perception'] = jsonEncode(selfPerception);
+        // Agregar campos del perfil según API v2
+        request.fields['first_name'] = profile.name;
+        request.fields['timezone'] = profile.timezone;
+        request.fields['self_perception_fulbito'] = jsonEncode(selfPerceptionFulbito);
+        request.fields['fulbito_extra_data'] = jsonEncode(fulbitoExtraData);
         
         // Agregar foto
         final file = File(profile.photoPath!);
@@ -55,13 +60,10 @@ class ProfileService {
       } else {
         // Si no hay foto, usar JSON
         final body = {
-          'firstname': profile.name,
-          'age': profile.age,
-          'is_goalkeeper': profile.isGoalkeeper,
-          'is_forward': profile.isStriker,
-          'is_midfielder': profile.isMidfielder,
-          'is_defender': profile.isDefender,
-          'self_perception': selfPerception,
+          'first_name': profile.name,
+          'timezone': profile.timezone,
+          'self_perception_fulbito': selfPerceptionFulbito,
+          'fulbito_extra_data': fulbitoExtraData,
         };
 
         print('📤 API CALL - PUT ${ApiConfig.updateProfileEndpoint} (JSON)');
@@ -123,8 +125,8 @@ class ProfileService {
         if (responseData['status'] == 'success' && responseData['data'] != null) {
           final data = responseData['data'];
           
-          // Mapear self_perception de inglés a español para uso interno
-          final selfPerception = data['self_perception'] as Map<String, dynamic>? ?? {};
+          // Mapear self_perception_fulbito de inglés a español para uso interno (API v2)
+          final selfPerception = data['self_perception_fulbito'] as Map<String, dynamic>? ?? {};
           final mappedSkills = <String, double>{
             'velocidad': (selfPerception['speed'] ?? 50).toDouble(),
             'resistencia': (selfPerception['stamina'] ?? 50).toDouble(),
@@ -134,16 +136,19 @@ class ProfileService {
             'defensa': (selfPerception['defending'] ?? 50).toDouble(),
           };
           
-          // Mapear average_opinion de inglés a español para uso interno
-          final averageOpinion = data['average_opinion'] as Map<String, dynamic>? ?? {};
+          // Mapear average_perception_fulbito de inglés a español para uso interno (API v2)
+          final averagePerception = data['average_perception_fulbito'] as Map<String, dynamic>? ?? {};
           final mappedAverageSkills = <String, double>{
-            'velocidad': (averageOpinion['speed'] ?? 0).toDouble(),
-            'resistencia': (averageOpinion['stamina'] ?? 0).toDouble(),
-            'tiro_arco': (averageOpinion['shooting'] ?? 0).toDouble(),
-            'gambeta': (averageOpinion['dribbling'] ?? 0).toDouble(),
-            'pases': (averageOpinion['passing'] ?? 0).toDouble(),
-            'defensa': (averageOpinion['defending'] ?? 0).toDouble(),
+            'velocidad': (averagePerception['speed'] ?? 0).toDouble(),
+            'resistencia': (averagePerception['stamina'] ?? 0).toDouble(),
+            'tiro_arco': (averagePerception['shooting'] ?? 0).toDouble(),
+            'gambeta': (averagePerception['dribbling'] ?? 0).toDouble(),
+            'pases': (averagePerception['passing'] ?? 0).toDouble(),
+            'defensa': (averagePerception['defending'] ?? 0).toDouble(),
           };
+          
+          // Extraer fulbito_extra_data (API v2)
+          final fulbitoExtraData = data['fulbito_extra_data'] as Map<String, dynamic>? ?? {};
           
           // Construir URL completa de la foto si existe
           String? fullPhotoUrl;
@@ -155,18 +160,18 @@ class ProfileService {
           }
           
           final profile = UserProfile(
-            // El backend devuelve first_name; usar fallback a firstname por compatibilidad
-            name: data['first_name'] ?? data['firstname'] ?? '',
+            name: data['first_name'] ?? '',
             age: data['age'] ?? 30,
+            timezone: data['timezone'] ?? 'America/Argentina/Buenos_Aires',
             photoUrl: fullPhotoUrl,
             skills: mappedSkills,
             averageSkills: mappedAverageSkills,
-            isGoalkeeper: data['is_goalkeeper'] ?? false,
-            isStriker: data['is_forward'] ?? false,
-            isMidfielder: data['is_midfielder'] ?? false,
-            isDefender: data['is_defender'] ?? false,
+            isGoalkeeper: fulbitoExtraData['is_goalkeeper'] ?? false,
+            isStriker: fulbitoExtraData['is_forward'] ?? false,
+            isMidfielder: fulbitoExtraData['is_midfielder'] ?? false,
+            isDefender: fulbitoExtraData['is_defender'] ?? false,
             profileCompleted: true,
-            numberOfOpinions: data['number_of_opinions'] ?? 0,
+            numberOfOpinions: data['number_of_opinions_fulbito'] ?? 0,
           );
           
           print('✅ Profile loaded successfully from server');

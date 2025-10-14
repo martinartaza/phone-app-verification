@@ -107,12 +107,12 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Enviar código de verificación
-  Future<bool> sendVerificationCode(String phoneNumber) async {
+  Future<bool> sendVerificationCode(String phoneNumber, String timezone) async {
     _setLoading(true);
     _clearError();
     
     try {
-      final result = await auth_service.AuthService.createUser(phoneNumber);
+      final result = await auth_service.AuthService.createUser(phoneNumber, timezone);
       if (result['success']) {
         _phoneNumber = phoneNumber;
         notifyListeners();

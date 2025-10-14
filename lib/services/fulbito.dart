@@ -37,6 +37,69 @@ class FulbitoService {
     }
   }
 
+  Future<bool> updateFulbito(String token, int fulbitoId, Map<String, dynamic> updates) async {
+    try {
+      final url = Uri.parse(ApiConfig.getUpdateFulbitoUrl(fulbitoId));
+      
+      print('⚽ API CALL - PUT ${ApiConfig.updateFulbitoEndpoint}$fulbitoId/update/');
+      print('⚽ Headers: Authorization: Bearer $token');
+      print('⚽ Body: ${jsonEncode(updates)}');
+
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(updates),
+      );
+
+      print('⚽ Response Status: ${response.statusCode}');
+      print('⚽ Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('✅ Fulbito updated successfully');
+        return true;
+      } else {
+        print('❌ API Error: ${response.statusCode} - ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error updating fulbito: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteFulbito(String token, int fulbitoId) async {
+    try {
+      final url = Uri.parse(ApiConfig.getDeleteFulbitoUrl(fulbitoId));
+      
+      print('⚽ API CALL - DELETE ${ApiConfig.deleteFulbitoEndpoint}$fulbitoId/delete/');
+      print('⚽ Headers: Authorization: Bearer $token');
+
+      final response = await http.delete(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('⚽ Response Status: ${response.statusCode}');
+      print('⚽ Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('✅ Fulbito deleted successfully');
+        return true;
+      } else {
+        print('❌ API Error: ${response.statusCode} - ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error deleting fulbito: $e');
+      return false;
+    }
+  }
+
   Future<bool> setTeams({
     required String token,
     required int fulbitoId,

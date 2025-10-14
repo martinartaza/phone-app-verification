@@ -11,10 +11,10 @@ class PhoneInputProvider extends ChangeNotifier {
 
   // Lista de países disponibles (preparado para expansión)
   final List<Map<String, String>> _countries = [
-    {'name': 'Argentina', 'code': '+54', 'flag': '🇦🇷'},
-    {'name': 'Peru', 'code': '+51', 'flag': '🇵🇪'},
-    {'name': 'Chile', 'code': '+56', 'flag': '🇨🇱'},
-    {'name': 'Colombia', 'code': '+57', 'flag': '🇨🇴'},
+    {'name': 'Argentina', 'code': '+54', 'flag': '🇦🇷', 'timezone': 'America/Argentina/Buenos_Aires'},
+    {'name': 'Brasil', 'code': '+55', 'flag': '🇧🇷', 'timezone': 'America/Sao_Paulo'},
+    {'name': 'Chile', 'code': '+56', 'flag': '🇨🇱', 'timezone': 'America/Santiago'},
+    {'name': 'Colombia', 'code': '+57', 'flag': '🇨🇴', 'timezone': 'America/Bogota'},
   ];
   
   // Lista de provincias argentinas con códigos de área
@@ -59,6 +59,7 @@ class PhoneInputProvider extends ChangeNotifier {
   );
   List<Map<String, String>> get provinces => _provinces;
   String get fullPhoneNumber => '$_selectedCountryCode$_phoneNumber';
+  String get timezone => selectedCountry['timezone'] ?? 'America/Argentina/Buenos_Aires';
 
   /// Constructor - cargar datos guardados
   PhoneInputProvider() {

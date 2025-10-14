@@ -376,14 +376,20 @@ class PhoneInputScreen extends StatelessWidget {
       return;
     }
     
-    // Enviar código
-    final success = await authProvider.sendVerificationCode(phoneProvider.fullPhoneNumber);
+    // Enviar código con timezone
+    final success = await authProvider.sendVerificationCode(
+      phoneProvider.fullPhoneNumber,
+      phoneProvider.timezone,
+    );
     
     if (success && context.mounted) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => VerificationScreen(phoneNumber: phoneProvider.fullPhoneNumber),
+          builder: (context) => VerificationScreen(
+            phoneNumber: phoneProvider.fullPhoneNumber,
+            timezone: phoneProvider.timezone,
+          ),
         ),
       );
     } else if (context.mounted) {

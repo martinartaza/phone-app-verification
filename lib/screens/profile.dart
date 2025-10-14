@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../providers/profile.dart';
 import '../providers/auth.dart';
+import '../providers/phone_input.dart' as phone_input_provider;
 import '../widgets/profile_form_widget.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -22,6 +23,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      // Si viene de la verificación, obtener timezone del PhoneInputProvider
+      if (widget.fromVerification) {
+        final phoneInputProvider = Provider.of<phone_input_provider.PhoneInputProvider>(context, listen: false);
+        profileProvider.updateTimezone(phoneInputProvider.timezone);
+      }
       
       // Cargar perfil del servidor si hay token
       if (authProvider.token != null) {

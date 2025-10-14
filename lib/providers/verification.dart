@@ -38,11 +38,11 @@ class VerificationProvider extends ChangeNotifier {
   }
 
   /// Reenviar código de verificación
-  Future<bool> resendCode(String phoneNumber) async {
+  Future<bool> resendCode(String phoneNumber, String timezone) async {
     if (!_canResend) return false;
     
     try {
-      final result = await auth_service.AuthService.createUser(phoneNumber);
+      final result = await auth_service.AuthService.createUser(phoneNumber, timezone);
       if (result['success']) {
         startResendTimer();
         return true;

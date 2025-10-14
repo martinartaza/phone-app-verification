@@ -5,11 +5,12 @@ import '../models/auth_response.dart';
 import 'storage.dart' as storage_service;
 
 class AuthService {
-  static Future<Map<String, dynamic>> createUser(String phoneNumber) async {
+  static Future<Map<String, dynamic>> createUser(String phoneNumber, String timezone) async {
     try {
       final uri = Uri.parse(ApiConfig.createUserUrl);
       final requestBody = jsonEncode({
         'phone_number': phoneNumber,
+        'timezone': timezone,
       });
       
       final response = await http.post(
@@ -17,7 +18,6 @@ class AuthService {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
         },
         body: requestBody,
       );
@@ -44,14 +44,14 @@ class AuthService {
       final uri = Uri.parse(ApiConfig.verifyUserUrl);
       final requestBody = jsonEncode({
         'phone_number': phoneNumber,
-        'code': code,
+        'verification_code': code,
       });
       
       final response = await http.post(
         uri,
         headers: {
           'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
+          'Accept': 'application/json',
         },
         body: requestBody,
       );
@@ -127,7 +127,7 @@ class AuthService {
         uri,
         headers: {
           'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
+          'Accept': 'application/json',
         },
         body: requestBody,
       );

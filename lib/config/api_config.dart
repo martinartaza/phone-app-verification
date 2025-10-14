@@ -22,7 +22,7 @@ class ApiConfig {
     }
     */
     //return 'http://192.168.100.150:8000';
-    return 'https://ddaad4bb9569.ngrok-free.app';
+    return 'https://django.sebastianartaza.com';
   }
   //static const String baseUrl = 'http://192.168.100.150:8000';
   // Configuraciones manuales para override si es necesario:
@@ -31,16 +31,20 @@ class ApiConfig {
   // static const String baseUrl = 'http://localhost:8000';        // iOS Simulator
   
   // API Endpoints
-  static const String createUserEndpoint = '/api/auth/request-code/';
-  static const String verifyUserEndpoint = '/api/auth/verify-user/';
+  static const String createUserEndpoint = '/api/v2/auth/request-code/';
+  static const String verifyUserEndpoint = '/api/v2/auth/verify/';
   static const String refreshTokenEndpoint = '/api/auth/refresh-token/';
-  static const String updateProfileEndpoint = '/api/auth/players/me/';
+  static const String updateProfileEndpoint = '/api/v2/user/profile/update/';
   static const String invitationsEndpoint = '/api/auth/invitation/all/';
   static const String votePlayerEndpoint = '/api/auth/players/';
   static const String getPlayerDetailsEndpoint = '/api/auth/players/';
   static const String setPlayerOpinionEndpoint = '/api/auth/players/';
-  static const String createFulbitoEndpoint = '/api/auth/fulbito/';
-  static const String invitePlayerEndpoint = '/api/auth/invitation/network/invite/';
+  static const String createFulbitoEndpoint = '/api/v2/fulbito/create/';
+  static const String updateFulbitoEndpoint = '/api/v2/fulbito/';
+  static const String deleteFulbitoEndpoint = '/api/v2/fulbito/';
+  static const String invitePlayerEndpoint = '/api/v2/network/invite/';
+  static const String acceptConnectionEndpoint = '/api/v2/network/connection/';
+  static const String rejectConnectionEndpoint = '/api/v2/network/connection/';
   static const String invitationStatusEndpoint = '/api/auth/invitation/network/';
   static const String fulbitoStatusEndpoint = '/api/auth/invitation/fulbito/';
   static const String fulbitoPlayersEndpoint = '/api/auth/fulbito/';
@@ -60,7 +64,11 @@ class ApiConfig {
   static String getPlayerDetailsUrl(String uuid) => '$baseUrl$getPlayerDetailsEndpoint$uuid/opinion/';
   static String setPlayerOpinionUrl(String uuid) => '$baseUrl$setPlayerOpinionEndpoint$uuid/opinion/set/';
   static String get createFulbitoUrl => '$baseUrl$createFulbitoEndpoint';
+  static String getUpdateFulbitoUrl(int fulbitoId) => '$baseUrl$updateFulbitoEndpoint$fulbitoId/update/';
+  static String getDeleteFulbitoUrl(int fulbitoId) => '$baseUrl$deleteFulbitoEndpoint$fulbitoId/delete/';
   static String get invitePlayerUrl => '$baseUrl$invitePlayerEndpoint';
+  static String getAcceptConnectionUrl(int connectionId) => '$baseUrl$acceptConnectionEndpoint$connectionId/accept/';
+  static String getRejectConnectionUrl(int connectionId) => '$baseUrl$rejectConnectionEndpoint$connectionId/reject/';
   static String getInvitationStatusUrl(int invitationId) => '$baseUrl$invitationStatusEndpoint$invitationId/status/';
   static String getFulbitoStatusUrl(int invitationId) => '$baseUrl$fulbitoStatusEndpoint$invitationId/status/';
   static String getFulbitoPlayersUrl(int fulbitoId) => '$baseUrl$fulbitoPlayersEndpoint$fulbitoId/players';

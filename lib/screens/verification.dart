@@ -5,8 +5,13 @@ import '../providers/verification.dart' as verification_provider;
 
 class VerificationScreen extends StatefulWidget {
   final String phoneNumber;
+  final String timezone;
 
-  const VerificationScreen({Key? key, required this.phoneNumber}) : super(key: key);
+  const VerificationScreen({
+    Key? key, 
+    required this.phoneNumber,
+    required this.timezone,
+  }) : super(key: key);
 
   @override
   _VerificationScreenState createState() => _VerificationScreenState();
@@ -88,7 +93,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
   Future<void> _resendCode() async {
     final verificationProvider = Provider.of<verification_provider.VerificationProvider>(context, listen: false);
     
-    final success = await verificationProvider.resendCode(widget.phoneNumber);
+    final success = await verificationProvider.resendCode(widget.phoneNumber, widget.timezone);
     
     if (success && mounted) {
       _showMessage('Código reenviado', isError: false);
