@@ -18,6 +18,7 @@ class _InvitePlayersScreenState extends State<InvitePlayersScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   Player? _selected;
+  late InvitePlayersProvider _inviteProvider;
 
   @override
   void initState() {
@@ -30,11 +31,17 @@ class _InvitePlayersScreenState extends State<InvitePlayersScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Obtener referencia al provider de forma segura
+    _inviteProvider = Provider.of<InvitePlayersProvider>(context, listen: false);
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     // Limpiar el estado del provider cuando se cierre la pantalla
-    final inviteProvider = Provider.of<InvitePlayersProvider>(context, listen: false);
-    inviteProvider.clearState();
+    _inviteProvider.clearState();
     super.dispose();
   }
 

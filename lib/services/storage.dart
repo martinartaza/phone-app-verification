@@ -268,4 +268,54 @@ class StorageService {
     await prefs.remove('last_sync_timestamp');
     print('💾 Estado de sincronización limpiado');
   }
+
+  // ========== MÉTODOS DE DATA LOCAL (NETWORK & FULBITOS) ==========
+
+  /// Guardar datos de red (conexiones e invitaciones)
+  static Future<void> saveNetworkData(Map<String, dynamic> networkData) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('network_data', jsonEncode(networkData));
+    print('💾 Network data guardada: ${networkData['connections']?.length ?? 0} conexiones, ${networkData['pending_received']?.length ?? 0} invitaciones');
+  }
+
+  /// Obtener datos de red guardados
+  static Future<Map<String, dynamic>?> getNetworkData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dataString = prefs.getString('network_data');
+    if (dataString != null) {
+      final data = jsonDecode(dataString);
+      print('💾 Network data cargada: ${data['connections']?.length ?? 0} conexiones, ${data['pending_received']?.length ?? 0} invitaciones');
+      return data;
+    }
+    print('💾 No hay network data guardada');
+    return null;
+  }
+
+  /// Guardar datos de fulbitos
+  static Future<void> saveFulbitosData(Map<String, dynamic> fulbitosData) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('fulbitos_data', jsonEncode(fulbitosData));
+    print('💾 Fulbitos data guardada: ${fulbitosData['my_fulbitos']?.length ?? 0} propios, ${fulbitosData['member_fulbitos']?.length ?? 0} como miembro');
+  }
+
+  /// Obtener datos de fulbitos guardados
+  static Future<Map<String, dynamic>?> getFulbitosData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dataString = prefs.getString('fulbitos_data');
+    if (dataString != null) {
+      final data = jsonDecode(dataString);
+      print('💾 Fulbitos data cargada: ${data['my_fulbitos']?.length ?? 0} propios, ${data['member_fulbitos']?.length ?? 0} como miembro');
+      return data;
+    }
+    print('💾 No hay fulbitos data guardada');
+    return null;
+  }
+
+  /// Limpiar toda la data local (network y fulbitos)
+  static Future<void> clearLocalData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('network_data');
+    await prefs.remove('fulbitos_data');
+    print('💾 Data local limpiada (network y fulbitos)');
+  }
 }

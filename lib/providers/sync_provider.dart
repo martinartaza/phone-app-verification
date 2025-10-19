@@ -25,6 +25,9 @@ class SyncProvider with ChangeNotifier {
   SyncFulbitosData? _fulbitosData;
   SyncNotificationsData? _notificationsData;
   
+  // Token para llamadas API
+  String? _token;
+  
   // Getters
   bool get isLoading => _isLoading;
   bool get isInitialLoad => _isInitialLoad;
@@ -47,6 +50,14 @@ class SyncProvider with ChangeNotifier {
   int get totalNotifications => _notificationsData?.total ?? 0;
   int get networkNotifications => _notificationsData?.network ?? 0;
   int get fulbitoNotifications => _notificationsData?.fulbito ?? 0;
+  
+  String? get token => _token;
+
+  /// Configurar token para llamadas API
+  void setToken(String token) {
+    _token = token;
+    print('✅ [SyncProvider] Token configurado');
+  }
 
   /// Carga inicial completa - Todas las páginas
   Future<bool> performInitialSync(String token) async {
@@ -105,18 +116,28 @@ class SyncProvider with ChangeNotifier {
       print('🔄 [SyncProvider] ETag: $_currentEtag');
       print('🔄 [SyncProvider] Last Sync: $_lastSyncTimestamp');
       
-      final response = await SyncService.syncIncremental(
+      final result = await SyncService.syncIncremental(
         token: token,
         lastSync: _lastSyncTimestamp,
         etag: _currentEtag,
       );
       
-      if (response != null) {
-        await _processSyncResponse(response);
+      if (result != null) {
+        // Procesar datos
+        await _processSyncResponse(result.response);
+        
+        // Actualizar ETag y lastUpdate SOLAMENTE tras sync
+        if (result.etag != null && result.etag!.isNotEmpty) {
+          _currentEtag = result.etag;
+        }
+        if (result.lastUpdate != null && result.lastUpdate!.isNotEmpty) {
+          _lastSyncTimestamp = result.lastUpdate;
+        }
+        
         await _saveSyncState();
         
         // Actualizar polling si es necesario
-        final pollingInfo = SyncService.extractPollingInfo(response);
+        final pollingInfo = SyncService.extractPollingInfo(result.response);
         await _updatePolling(pollingInfo);
         
         print('✅ [SyncProvider] Incremental sync completed successfully');
@@ -156,12 +177,18 @@ class SyncProvider with ChangeNotifier {
     if (response.hasData && response.data!.network != null) {
       _networkData = response.data!.network!;
       print('🔄 [SyncProvider] Network data updated: ${_networkData!.totalConnections} connections');
+      
+      // Guardar network data localmente
+      await _saveNetworkData();
     }
     
     // Procesar datos de fulbitos
     if (response.hasData && response.data!.fulbitos != null) {
       _fulbitosData = response.data!.fulbitos!;
       print('🔄 [SyncProvider] Fulbitos data updated: ${_fulbitosData!.totalMyFulbitos} my fulbitos');
+      
+      // Guardar fulbitos data localmente
+      await _saveFulbitosData();
     }
     
     // Procesar notificaciones
@@ -171,6 +198,30 @@ class SyncProvider with ChangeNotifier {
     }
     
     notifyListeners();
+  }
+
+  /// Guardar network data localmente
+  Future<void> _saveNetworkData() async {
+    if (_networkData != null) {
+      try {
+        await storage_service.StorageService.saveNetworkData(_networkData!.toJson());
+        print('💾 [SyncProvider] Network data saved to storage');
+      } catch (e) {
+        print('❌ [SyncProvider] Error saving network data: $e');
+      }
+    }
+  }
+
+  /// Guardar fulbitos data localmente
+  Future<void> _saveFulbitosData() async {
+    if (_fulbitosData != null) {
+      try {
+        await storage_service.StorageService.saveFulbitosData(_fulbitosData!.toJson());
+        print('💾 [SyncProvider] Fulbitos data saved to storage');
+      } catch (e) {
+        print('❌ [SyncProvider] Error saving fulbitos data: $e');
+      }
+    }
   }
 
   /// Configurar polling dinámico
@@ -268,8 +319,34 @@ class SyncProvider with ChangeNotifier {
       _lastSyncTimestamp = lastSync;
       
       print('🔄 [SyncProvider] Sync state loaded: ETag=$etag, LastSync=$lastSync');
+      
+      // Cargar datos locales
+      await _loadLocalData();
     } catch (e) {
       print('❌ [SyncProvider] Error loading sync state: $e');
+    }
+  }
+
+  /// Cargar datos locales (network y fulbitos) desde storage
+  Future<void> _loadLocalData() async {
+    try {
+      // Cargar network data
+      final networkDataJson = await storage_service.StorageService.getNetworkData();
+      if (networkDataJson != null) {
+        _networkData = SyncNetworkData.fromJson(networkDataJson);
+        print('✅ [SyncProvider] Network data loaded from storage');
+      }
+      
+      // Cargar fulbitos data
+      final fulbitosDataJson = await storage_service.StorageService.getFulbitosData();
+      if (fulbitosDataJson != null) {
+        _fulbitosData = SyncFulbitosData.fromJson(fulbitosDataJson);
+        print('✅ [SyncProvider] Fulbitos data loaded from storage');
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      print('❌ [SyncProvider] Error loading local data: $e');
     }
   }
 
@@ -296,11 +373,12 @@ class SyncProvider with ChangeNotifier {
     
     await _stopPolling();
     
-    // Limpiar storage
+    // Limpiar storage (sync state + data local)
     await storage_service.StorageService.clearSyncState();
+    await storage_service.StorageService.clearLocalData();
     
     notifyListeners();
-    print('🔄 [SyncProvider] Sync state cleared');
+    print('🔄 [SyncProvider] Sync state and local data cleared');
   }
 
   /// Métodos privados para manejo de estado

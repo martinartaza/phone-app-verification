@@ -14,6 +14,40 @@ class NetworkUser {
     required this.invitationId,
     this.invitationMessage,
   });
+
+  /// Constructor para invitaciones recibidas desde sync
+  factory NetworkUser.fromSyncInvitation(Map<String, dynamic> json, String baseUrl) {
+    final fromUser = json['from_user'] as Map<String, dynamic>;
+    final photoUrl = fromUser['photo_url'] as String?;
+    
+    return NetworkUser(
+      username: fromUser['username'] ?? '',
+      uuid: fromUser['uuid'] ?? '',
+      phone: fromUser['phone'] ?? '',
+      photoUrl: photoUrl != null && photoUrl.isNotEmpty
+          ? (photoUrl.startsWith('http') ? photoUrl : '$baseUrl$photoUrl')
+          : null,
+      invitationId: json['id'] ?? 0,
+      invitationMessage: json['message'],
+    );
+  }
+
+  /// Constructor para conexiones aceptadas desde sync
+  factory NetworkUser.fromSyncConnection(Map<String, dynamic> json, String baseUrl) {
+    final user = json['user'] as Map<String, dynamic>;
+    final photoUrl = user['photo_url'] as String?;
+    
+    return NetworkUser(
+      username: user['username'] ?? '',
+      uuid: user['uuid'] ?? '',
+      phone: user['phone'] ?? '',
+      photoUrl: photoUrl != null && photoUrl.isNotEmpty
+          ? (photoUrl.startsWith('http') ? photoUrl : '$baseUrl$photoUrl')
+          : null,
+      invitationId: json['connection_id'] ?? 0,
+      invitationMessage: json['message'],
+    );
+  }
 }
 
 class RegistrationStatus {

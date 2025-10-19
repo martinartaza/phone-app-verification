@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class FulbitoFormWidget extends StatefulWidget {
   final String? initialName;
@@ -74,40 +75,137 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
   // Validación de hora HH:MM (00-23):(00-59)
   final RegExp _hhmmRegex = RegExp(r'^(?:[01][0-9]|2[0-3]):[0-5][0-9]$');
 
+  // Helper: normaliza un string de día (puede venir en español o inglés)
+  String _normalizeDay(String? input) {
+    if (input == null || input.trim().isEmpty) return 'saturday';
+    final raw = input.trim().toLowerCase();
+
+    // Mapa rápido label->value (sin acentos)
+    String stripAccents(String s) => s
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ñ', 'n');
+
+    final labelToValue = {
+      stripAccents('lunes'): 'monday',
+      stripAccents('martes'): 'tuesday',
+      stripAccents('miercoles'): 'wednesday',
+      stripAccents('miércoles'): 'wednesday',
+      stripAccents('jueves'): 'thursday',
+      stripAccents('viernes'): 'friday',
+      stripAccents('sabado'): 'saturday',
+      stripAccents('sábado'): 'saturday',
+      stripAccents('domingo'): 'sunday',
+    };
+
+    final normalized = stripAccents(raw);
+
+    // Si ya es un value válido, devolverlo
+    final validValues = _days.map((d) => d['value']).whereType<String>().toSet();
+    if (validValues.contains(normalized)) return normalized;
+
+    // Si coincide con algún label español, mapear
+    if (labelToValue.containsKey(normalized)) {
+      return labelToValue[normalized]!;
+    }
+
+    // Fallback
+    return 'saturday';
+  }
+
+  // Helper: normaliza entradas a formato HH:MM
+  String _normalizeHour(String input) {
+    String t = input.trim();
+    if (t.isEmpty) return '';
+
+    // Reemplazar punto o coma por dos puntos
+    t = t.replaceAll('.', ':').replaceAll(',', ':');
+
+    // Si viene con segundos, cortar
+    if (RegExp(r'^\d{1,2}:\d{2}:\d{2}').hasMatch(t)) {
+      t = t.split(':').sublist(0, 2).join(':');
+    }
+
+    // Caso HH:MM parcial
+    if (RegExp(r'^\d{1,2}:\d{0,2}').hasMatch(t)) {
+      final parts = t.split(':');
+      int hh = int.tryParse(parts[0]) ?? 0;
+      String mm = parts.length > 1 ? parts[1] : '';
+      if (mm.length == 1) mm = '0$mm';
+      if (mm.isEmpty) mm = '00';
+      if (hh < 0) hh = 0; if (hh > 23) hh = 23;
+      int mmi = int.tryParse(mm) ?? 0; if (mmi > 59) mmi = 59;
+      final hhStr = hh.toString().padLeft(2, '0');
+      final mmStr = mmi.toString().padLeft(2, '0');
+      return '$hhStr:$mmStr';
+    }
+
+    // Caso solo dígitos: 900 -> 09:00, 21 -> 21:00, 2130 -> 21:30
+    if (RegExp(r'^\d{1,4}').hasMatch(t)) {
+      final digits = t.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.length <= 2) {
+        final hh = int.parse(digits);
+        final hhStr = hh.clamp(0, 23).toString().padLeft(2, '0');
+        return '$hhStr:00';
+      }
+      final hh = int.parse(digits.substring(0, digits.length - 2)).clamp(0, 23);
+      final mm = int.parse(digits.substring(digits.length - 2)).clamp(0, 59);
+      final hhStr = hh.toString().padLeft(2, '0');
+      final mmStr = mm.toString().padLeft(2, '0');
+      return '$hhStr:$mmStr';
+    }
+
+    // Fallback: intentar extraer HH:MM
+    final match = RegExp(r'(\d{1,2})[:h]?(\d{2})').firstMatch(t);
+    if (match != null) {
+      final hh = int.parse(match.group(1)! ).clamp(0, 23);
+      final mm = int.parse(match.group(2)! ).clamp(0, 59);
+      return '${hh.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}';
+    }
+
+    return '';
+  }
+
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName ?? '');
     _placeController = TextEditingController(text: widget.initialPlace ?? '');
     _capacityController = TextEditingController(text: (widget.initialCapacity ?? 10).toString());
-    _selectedDay = widget.initialDay ?? 'saturday';
+    _selectedDay = _normalizeDay(widget.initialDay ?? 'saturday');
     
     // Limpiar la hora para que coincida con el formato del dropdown (HH:MM)
     String initialHour = widget.initialHour ?? '12:00';
     if (initialHour.length > 5) {
       initialHour = initialHour.substring(0, 5);
     }
+    initialHour = _normalizeHour(initialHour).isEmpty ? '12:00' : _normalizeHour(initialHour);
     _selectedHour = initialHour;
     _hourController = TextEditingController(text: _selectedHour);
     
-    _selectedRegistrationDay = widget.initialRegistrationDay ?? 'monday';
+    _selectedRegistrationDay = _normalizeDay(widget.initialRegistrationDay ?? 'monday');
     
     // Limpiar la hora de registro para que coincida con el formato del dropdown (HH:MM)
     String initialRegistrationHour = widget.initialRegistrationHour ?? '12:00';
     if (initialRegistrationHour.length > 5) {
       initialRegistrationHour = initialRegistrationHour.substring(0, 5);
     }
+    initialRegistrationHour = _normalizeHour(initialRegistrationHour).isEmpty ? '12:00' : _normalizeHour(initialRegistrationHour);
     _selectedRegistrationHour = initialRegistrationHour;
     _registrationHourController = TextEditingController(text: _selectedRegistrationHour);
     
     // Inicializar campos de invitaciones de invitados
     _invitationsEnabled = widget.initialInvitationGuestStartDay != null && widget.initialInvitationGuestStartHour != null;
-    _selectedInvitationGuestStartDay = widget.initialInvitationGuestStartDay ?? 'monday';
+    _selectedInvitationGuestStartDay = _normalizeDay(widget.initialInvitationGuestStartDay ?? 'monday');
     
     String initialInvitationGuestStartHour = widget.initialInvitationGuestStartHour ?? '12:00';
     if (initialInvitationGuestStartHour.length > 5) {
       initialInvitationGuestStartHour = initialInvitationGuestStartHour.substring(0, 5);
     }
+    initialInvitationGuestStartHour = _normalizeHour(initialInvitationGuestStartHour).isEmpty ? '12:00' : _normalizeHour(initialInvitationGuestStartHour);
     _selectedInvitationGuestStartHour = initialInvitationGuestStartHour;
     _invitationHourController = TextEditingController(text: _selectedInvitationGuestStartHour);
   }
@@ -353,6 +451,19 @@ class _FulbitoFormWidgetState extends State<FulbitoFormWidget> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       keyboardType: TextInputType.datetime,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'^\d{0,2}:?\d{0,2}$')),
+        TextInputFormatter.withFunction((oldValue, newValue) {
+          final text = newValue.text;
+          if (text.length == 2) {
+            return TextEditingValue(
+              text: '$text:',
+              selection: newValue.selection,
+            );
+          }
+          return newValue;
+        }),
+      ],
       validator: (value) {
         final text = (value ?? '').trim();
         if (text.isEmpty) return 'Ingrese una hora';

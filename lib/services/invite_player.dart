@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/network_connection.dart';
+import 'api_client.dart';
 
 class InvitePlayerService {
   /// Invita a un usuario a la red (API v2)
@@ -71,28 +72,46 @@ class InvitePlayerService {
   static Future<bool> acceptConnection({
     required String token,
     required int connectionId,
+    ApiClient? apiClient,
   }) async {
     try {
-      print('🌐 API CALL - PUT ${ApiConfig.acceptConnectionEndpoint}$connectionId/accept/');
-      print('🌐 Headers: Authorization: Bearer $token');
-
-      final response = await http.put(
-        Uri.parse(ApiConfig.getAcceptConnectionUrl(connectionId)),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      print('🌐 Response Status: ${response.statusCode}');
-      print('🌐 Response Body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        print('✅ Connection accepted successfully');
-        return true;
+      if (apiClient != null) {
+        // Usar ApiClient con sync automático
+        final response = await apiClient.put(
+          ApiConfig.getAcceptConnectionUrl(connectionId),
+          triggerSync: true,
+        );
+        
+        if (response.statusCode == 200) {
+          print('✅ Connection accepted successfully');
+          return true;
+        } else {
+          print('❌ API Error: ${response.statusCode} - ${response.body}');
+          return false;
+        }
       } else {
-        print('❌ API Error: ${response.statusCode} - ${response.body}');
-        return false;
+        // Fallback: uso directo de http (sin sync automático)
+        print('🌐 API CALL - PUT ${ApiConfig.acceptConnectionEndpoint}$connectionId/accept/');
+        print('🌐 Headers: Authorization: Bearer $token');
+
+        final response = await http.put(
+          Uri.parse(ApiConfig.getAcceptConnectionUrl(connectionId)),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+
+        print('🌐 Response Status: ${response.statusCode}');
+        print('🌐 Response Body: ${response.body}');
+
+        if (response.statusCode == 200) {
+          print('✅ Connection accepted successfully');
+          return true;
+        } else {
+          print('❌ API Error: ${response.statusCode} - ${response.body}');
+          return false;
+        }
       }
     } catch (e) {
       print('❌ Error accepting connection: $e');
@@ -104,28 +123,46 @@ class InvitePlayerService {
   static Future<bool> rejectConnection({
     required String token,
     required int connectionId,
+    ApiClient? apiClient,
   }) async {
     try {
-      print('🌐 API CALL - PUT ${ApiConfig.rejectConnectionEndpoint}$connectionId/reject/');
-      print('🌐 Headers: Authorization: Bearer $token');
-
-      final response = await http.put(
-        Uri.parse(ApiConfig.getRejectConnectionUrl(connectionId)),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      print('🌐 Response Status: ${response.statusCode}');
-      print('🌐 Response Body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        print('✅ Connection rejected successfully');
-        return true;
+      if (apiClient != null) {
+        // Usar ApiClient con sync automático
+        final response = await apiClient.put(
+          ApiConfig.getRejectConnectionUrl(connectionId),
+          triggerSync: true,
+        );
+        
+        if (response.statusCode == 200) {
+          print('✅ Connection rejected successfully');
+          return true;
+        } else {
+          print('❌ API Error: ${response.statusCode} - ${response.body}');
+          return false;
+        }
       } else {
-        print('❌ API Error: ${response.statusCode} - ${response.body}');
-        return false;
+        // Fallback: uso directo de http (sin sync automático)
+        print('🌐 API CALL - PUT ${ApiConfig.rejectConnectionEndpoint}$connectionId/reject/');
+        print('🌐 Headers: Authorization: Bearer $token');
+
+        final response = await http.put(
+          Uri.parse(ApiConfig.getRejectConnectionUrl(connectionId)),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+
+        print('🌐 Response Status: ${response.statusCode}');
+        print('🌐 Response Body: ${response.body}');
+
+        if (response.statusCode == 200) {
+          print('✅ Connection rejected successfully');
+          return true;
+        } else {
+          print('❌ API Error: ${response.statusCode} - ${response.body}');
+          return false;
+        }
       }
     } catch (e) {
       print('❌ Error rejecting connection: $e');
@@ -139,6 +176,12 @@ class InvitePlayerService {
     required List<String> phoneNumbers,
   }) async {
     try {
+      print('🌐 API CALL - POST ${ApiConfig.getFulbitoInviteUrl(fulbitoId)}');
+      print('🌐 Headers: Authorization: Bearer $token');
+      print('🌐 Body: {phone_numbers: $phoneNumbers}');
+
+      // TODO: La API v2 requiere user_id en lugar de phone_numbers
+      // Por ahora, usar la API vieja hasta que implementemos la conversión de phone -> user_id
       final response = await http.post(
         Uri.parse(ApiConfig.getFulbitoInviteUrl(fulbitoId)),
         headers: {
@@ -150,20 +193,24 @@ class InvitePlayerService {
         }),
       );
 
-      final responseData = jsonDecode(response.body);
+      print('🌐 Response Status: ${response.statusCode}');
+      print('🌐 Response Body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
         return {
           'success': true,
           'data': responseData,
         };
       } else {
+        final responseData = jsonDecode(response.body);
         return {
           'success': false,
           'error': responseData['message'] ?? 'Error al enviar invitaciones',
         };
       }
     } catch (e) {
+      print('❌ Error inviting to fulbito: $e');
       return {
         'success': false,
         'error': 'Error de conexión: $e',

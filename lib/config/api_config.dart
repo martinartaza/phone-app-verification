@@ -51,7 +51,9 @@ class ApiConfig {
   static const String invitationStatusEndpoint = '/api/auth/invitation/network/';
   static const String fulbitoStatusEndpoint = '/api/auth/invitation/fulbito/';
   static const String fulbitoPlayersEndpoint = '/api/auth/fulbito/';
-  static const String fulbitoInviteEndpoint = '/api/auth/invitation/fulbito/';
+  static const String fulbitoInviteEndpoint = '/api/v2/fulbito/';
+  static const String fulbitoInviteListEndpoint = '/api/v2/fulbito/';
+  static const String fulbitoDetailsEndpoint = '/api/v2/fulbito/';
   static const String fulbitoRegisterEndpoint = '/api/auth/fulbito/';
   static const String fulbitoRegisterInviteEndpoint = '/api/auth/fulbito/';
   static const String fulbitoUnregisterEndpoint = '/api/auth/fulbito/';
@@ -81,6 +83,8 @@ class ApiConfig {
   static String getFulbitoStatusUrl(int invitationId) => '$baseUrl$fulbitoStatusEndpoint$invitationId/status/';
   static String getFulbitoPlayersUrl(int fulbitoId) => '$baseUrl$fulbitoPlayersEndpoint$fulbitoId/players';
   static String getFulbitoInviteUrl(int fulbitoId) => '$baseUrl$fulbitoInviteEndpoint$fulbitoId/invite/';
+  static String getFulbitoInviteListUrl(int fulbitoId) => '$baseUrl$fulbitoInviteListEndpoint$fulbitoId/invite/list/';
+  static String getFulbitoDetailsUrl(int fulbitoId) => '$baseUrl$fulbitoDetailsEndpoint$fulbitoId/details/';
   static String getFulbitoRegisterUrl(int fulbitoId) => '$baseUrl$fulbitoRegisterEndpoint$fulbitoId/register/';
   static String getFulbitoRegisterInviteUrl(int fulbitoId) => '$baseUrl$fulbitoRegisterInviteEndpoint$fulbitoId/register_invite/';
   static String getFulbitoUnregisterUrl(int fulbitoId) => '$baseUrl$fulbitoUnregisterEndpoint$fulbitoId/unregister/';

@@ -7,6 +7,8 @@ import '../providers/profile.dart';
 import '../providers/invitations.dart';
 import '../providers/home.dart';
 import '../providers/registration.dart';
+import '../providers/fulbito/fulbito_provider.dart';
+import '../providers/fulbito/invite_players_provider.dart';
 import '../models/network.dart';
 import '../widgets/maintenance_modal.dart';
 import '../config/api_config.dart';
@@ -16,6 +18,7 @@ import 'invite_player.dart';
 import 'fulbito/fulbito_details.dart';
 import 'invite_guest_player_screen.dart';
 import '../providers/unregister_guest.dart';
+import '../providers/sync_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -42,9 +45,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
       final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
       final invitationsProvider = Provider.of<InvitationsProvider>(context, listen: false);
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+      
+      // Asegurar wiring con SyncProvider (por si Home se abre sin pasar por Splash)
+      invitationsProvider.setSyncProvider(syncProvider);
+      
+      // Configurar FulbitoProvider con SyncProvider
+      final fulbitoProvider = Provider.of<FulbitoProvider>(context, listen: false);
+      fulbitoProvider.setSyncProvider(syncProvider);
+      
+      // Configurar InvitePlayersProvider con SyncProvider
+      final invitePlayersProvider = Provider.of<InvitePlayersProvider>(context, listen: false);
+      invitePlayersProvider.setSyncProvider(syncProvider);
       
       if (authProvider.token != null) {
         profileProvider.loadProfile(authProvider.token!);
+        
+        // Hacer sincronización al entrar al Home
+        await _performSyncOnHomeReturn(authProvider.token!, syncProvider);
+        
         await invitationsProvider.load(authProvider.token!);
         _updateNextEventFromProvider();
       }
@@ -64,12 +83,58 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.resumed) {
       final authProv = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+      final invitationsProvider = Provider.of<InvitationsProvider>(context, listen: false);
+      
+      // Asegurar wiring cada vez que volvemos
+      invitationsProvider.setSyncProvider(syncProvider);
+      
       if (authProv.token != null) {
         try {
-          await Provider.of<InvitationsProvider>(context, listen: false).load(authProv.token!);
+          // Hacer sincronización al volver del background
+          await _performSyncOnHomeReturn(authProv.token!, syncProvider);
+          
+          await invitationsProvider.load(authProv.token!);
           _updateNextEventFromProvider();
         } catch (_) {}
       }
+    }
+  }
+
+  /// Realizar sincronización al volver al Home
+  Future<void> _performSyncOnHomeReturn(String token, SyncProvider syncProvider) async {
+    try {
+      print('🔄 [HomeScreen] Performing sync on home return...');
+      
+      // Si no hay lastSync, realizar inicial; si lo hay, incremental
+      if (syncProvider.lastSyncTimestamp == null) {
+        print('ℹ️ [HomeScreen] No previous sync data, performing initial sync');
+        await syncProvider.performInitialSync(token);
+      } else {
+        final success = await syncProvider.performIncrementalSync(token);
+        if (success) {
+          print('✅ [HomeScreen] Sync completed successfully');
+        } else {
+          print('⚠️ [HomeScreen] Sync failed or no changes detected');
+        }
+      }
+    } catch (e) {
+      print('❌ [HomeScreen] Error during sync: $e');
+    }
+  }
+
+  /// Sincronizar al volver de otras pantallas
+  Future<void> _syncOnReturn() async {
+    try {
+      final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+      
+      if (authProvider.token != null) {
+        print('🔄 [HomeScreen] Syncing on return from other screen...');
+        await _performSyncOnHomeReturn(authProvider.token!, syncProvider);
+      }
+    } catch (e) {
+      print('❌ [HomeScreen] Error syncing on return: $e');
     }
   }
 
@@ -161,7 +226,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             builder: (context, profileProvider, child) {
               return GestureDetector(
                 onTap: () {
-                  Navigator.pushNamed(context, '/profile');
+                  Navigator.pushNamed(context, '/profile').then((_) {
+                    // Sincronizar al volver del perfil
+                    _syncOnReturn();
+                  });
                 },
                 child: Container(
                   width: 40,
@@ -696,7 +764,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             MaterialPageRoute(
               builder: (context) => const CreateFulbitoScreen(),
             ),
-          );
+          ).then((_) {
+            // Sincronizar al volver del CreateFulbito
+            _syncOnReturn();
+          });
         } else {
           // Pestaña Jugadores - Invitar jugador
           Navigator.push(
@@ -704,7 +775,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             MaterialPageRoute(
               builder: (context) => const InvitePlayerScreen(),
             ),
-          );
+          ).then((_) {
+            // Sincronizar al volver del InvitePlayer
+            _syncOnReturn();
+          });
         }
       },
       child: Container(

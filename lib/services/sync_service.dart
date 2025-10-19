@@ -54,7 +54,8 @@ class SyncService {
   }
 
   /// Sincronización incremental - Actualizaciones con ETag y last_sync
-  static Future<SyncResponse?> syncIncremental({
+  /// Devuelve cuerpo + headers relevantes (etag, x-last-update)
+  static Future<SyncIncrementalResult?> syncIncremental({
     required String token,
     String? lastSync,
     String? etag,
@@ -90,9 +91,15 @@ class SyncService {
         // Hay cambios - procesar respuesta completa
         final responseData = jsonDecode(response.body);
         final syncResponse = SyncResponse.fromJson(responseData);
+        final newEtag = response.headers['etag'];
+        final newLastUpdate = response.headers['x-last-update'];
         
         print('✅ SYNC: Changes detected, processing updates');
-        return syncResponse;
+        return SyncIncrementalResult(
+          response: syncResponse,
+          etag: newEtag,
+          lastUpdate: newLastUpdate,
+        );
         
       } else if (response.statusCode == 304) {
         // No hay cambios - ETag coincide
@@ -101,23 +108,29 @@ class SyncService {
         // Extraer información de polling de los headers
         final nextPoll = response.headers['x-next-poll'];
         final needsPolling = response.headers['x-needs-polling'] == 'true';
+        final newEtag = response.headers['etag'];
+        final newLastUpdate = response.headers['x-last-update'];
         
         print('🔄 Next Poll: $nextPoll seconds');
         print('🔄 Needs Polling: $needsPolling');
         
         // Crear respuesta minimalista para indicar "sin cambios"
-        return SyncResponse(
+        return SyncIncrementalResult(
+          response: SyncResponse(
           status: 'success',
           message: 'No changes detected',
           version: SyncVersion(global: '', network: '', fulbitos: ''),
           timestamp: DateTime.now().toIso8601String(),
-          lastUpdate: response.headers['x-last-update'] ?? '',
+          lastUpdate: newLastUpdate ?? '',
           polling: SyncPolling(
             needsPolling: needsPolling,
             nextPollSeconds: int.tryParse(nextPoll ?? '600') ?? 600,
             reason: 'no_changes',
             criticalEvents: [],
           ),
+          ),
+          etag: newEtag,
+          lastUpdate: newLastUpdate,
         );
         
       } else {
@@ -246,6 +259,19 @@ class SyncInitialPagesResult {
 
   SyncInitialPagesResult({
     required this.pages,
+    this.etag,
+    this.lastUpdate,
+  });
+}
+
+/// Resultado de sincronización incremental
+class SyncIncrementalResult {
+  final SyncResponse response;
+  final String? etag;
+  final String? lastUpdate;
+
+  SyncIncrementalResult({
+    required this.response,
     this.etag,
     this.lastUpdate,
   });

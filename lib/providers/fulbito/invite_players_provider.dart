@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/player.dart';
 import '../../services/invite_player.dart';
+import '../sync_provider.dart';
 
 class InvitePlayersProvider with ChangeNotifier {
   // Estado del provider
@@ -8,6 +9,9 @@ class InvitePlayersProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   String _invitationMessage = '';
+  
+  // Referencia al SyncProvider para obtener user_id de phone_numbers
+  SyncProvider? _syncProvider;
 
   // Getters
   Set<int> get selectedPlayers => Set.from(_selectedPlayers);
@@ -15,6 +19,12 @@ class InvitePlayersProvider with ChangeNotifier {
   String? get error => _error;
   String get invitationMessage => _invitationMessage;
   bool get hasSelectedPlayers => _selectedPlayers.isNotEmpty;
+
+  /// Configurar el SyncProvider
+  void setSyncProvider(SyncProvider syncProvider) {
+    _syncProvider = syncProvider;
+    print('✅ [InvitePlayersProvider] SyncProvider configurado');
+  }
 
   // Seleccionar/deseleccionar jugador
   void togglePlayerSelection(int playerId) {
