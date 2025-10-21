@@ -1355,6 +1355,7 @@ class _FulbitoItemState extends State<_FulbitoItem> {
       players: status.players,
       currentUserId: currentUserId,
       registrationOpen: status.registrationOpen,
+      userRegistered: status.userRegistered, // Usar el campo del sync
     );
     
     // Obtener información del usuario inscrito
@@ -1562,7 +1563,7 @@ class _FulbitoItemState extends State<_FulbitoItem> {
           ],
           
           // Información del usuario inscrito (solo si la inscripción está abierta)
-          if (status.registrationOpen && userPlayerInfo != null) ...[
+          if (status.registrationOpen && (userPlayerInfo != null || status.userRegistered == true)) ...[
             const SizedBox(height: 4),
             Row(
               children: [
@@ -1643,7 +1644,7 @@ class _FulbitoItemState extends State<_FulbitoItem> {
           
           
           // Estado de invitaciones de invitados (solo si la inscripción está abierta)
-          if (status.registrationOpen && status.invitationOpensAt != null) ...[
+          if (status.registrationOpen && status.invitationOpen) ...[
             const SizedBox(height: 4),
             Row(
               children: [

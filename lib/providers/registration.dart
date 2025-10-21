@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../providers/auth.dart' as auth_provider;
 import '../providers/invitations.dart';
+import '../providers/sync_provider.dart';
+import '../services/api_client.dart';
 
 class RegistrationProvider extends ChangeNotifier {
   bool _isLoading = false;
@@ -23,7 +25,7 @@ class RegistrationProvider extends ChangeNotifier {
         return false;
       }
 
-      final response = await _callRegistrationAPI(authProvider.token!, fulbitoId);
+      final response = await _callRegistrationAPI(context, authProvider.token!, fulbitoId);
       
       if (response['success']) {
         // Mostrar modal de éxito
@@ -58,7 +60,7 @@ class RegistrationProvider extends ChangeNotifier {
         return false;
       }
 
-      final response = await _callCancelRegistrationAPI(authProvider.token!, fulbitoId);
+      final response = await _callCancelRegistrationAPI(context, authProvider.token!, fulbitoId);
       
       if (response['success']) {
         // Mostrar modal de éxito
@@ -143,16 +145,28 @@ class RegistrationProvider extends ChangeNotifier {
     );
   }
 
-  Future<Map<String, dynamic>> _callRegistrationAPI(String token, int fulbitoId) async {
-    final url = Uri.parse(ApiConfig.getFulbitoRegisterUrl(fulbitoId));
+  Future<Map<String, dynamic>> _callRegistrationAPI(BuildContext context, String token, int fulbitoId) async {
+    final url = ApiConfig.getFulbitoRegisterUrl(fulbitoId);
     
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
+    // Usar ApiClient con sync automático
+    final apiClient = ApiClient(
+      token: token,
+      onSyncRequired: (token) async {
+        print('🔄 [RegistrationProvider] Sync triggered by ApiClient');
+        print('🔄 [RegistrationProvider] Context available: ${context != null}');
+        try {
+          // Ejecutar sync real
+          final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+          print('🔄 [RegistrationProvider] SyncProvider obtained, starting sync...');
+          await syncProvider.performIncrementalSync(token);
+          print('✅ [RegistrationProvider] Sync completed successfully');
+        } catch (e) {
+          print('❌ [RegistrationProvider] Error during sync: $e');
+        }
       },
     );
+    
+    final response = await apiClient.post(url);
 
     print('🔍 HTTP Status: ${response.statusCode}');
     print('🔍 Response Body: ${response.body}');
@@ -179,16 +193,28 @@ class RegistrationProvider extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> _callCancelRegistrationAPI(String token, int fulbitoId) async {
-    final url = Uri.parse(ApiConfig.getFulbitoUnregisterUrl(fulbitoId));
+  Future<Map<String, dynamic>> _callCancelRegistrationAPI(BuildContext context, String token, int fulbitoId) async {
+    final url = ApiConfig.getFulbitoUnregisterUrl(fulbitoId);
     
-    final response = await http.delete(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
+    // Usar ApiClient con sync automático
+    final apiClient = ApiClient(
+      token: token,
+      onSyncRequired: (token) async {
+        print('🔄 [RegistrationProvider] Sync triggered by ApiClient');
+        print('🔄 [RegistrationProvider] Context available: ${context != null}');
+        try {
+          // Ejecutar sync real
+          final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+          print('🔄 [RegistrationProvider] SyncProvider obtained, starting sync...');
+          await syncProvider.performIncrementalSync(token);
+          print('✅ [RegistrationProvider] Sync completed successfully');
+        } catch (e) {
+          print('❌ [RegistrationProvider] Error during sync: $e');
+        }
       },
     );
+    
+    final response = await apiClient.delete(url);
 
     print('🔍 Cancel HTTP Status: ${response.statusCode}');
     print('🔍 Cancel Response Body: ${response.body}');
@@ -766,10 +792,12 @@ class RegistrationProvider extends ChangeNotifier {
     required List<Map<String, dynamic>> players,
     required int? currentUserId,
     required bool registrationOpen,
+    bool? userRegistered, // Nuevo parámetro del sync
   }) {
     print('🔍 shouldShowInscriptionButton - Debug:');
     print('  - currentUserId: $currentUserId');
     print('  - registrationOpen: $registrationOpen');
+    print('  - userRegistered: $userRegistered');
     print('  - players: $players');
     
     // Si no hay usuario actual, no mostrar botón de inscripción
@@ -784,18 +812,28 @@ class RegistrationProvider extends ChangeNotifier {
       return false;
     }
     
-    // Verificar si el usuario está inscrito como "player" o "substitute" (no como "guest")
+    // PRIORIDAD: Usar userRegistered del sync si está disponible
+    if (userRegistered != null) {
+      print('  - Usando userRegistered del sync: $userRegistered');
+      print('  - DEBUG: userRegistered es de tipo: ${userRegistered.runtimeType}');
+      final bool result = !userRegistered; // Si está registrado, NO mostrar botón de inscripción
+      print('  - Resultado final: $result (${result ? "INSCRIPCIÓN" : "DESINSCRIPCIÓN"})');
+      print('  - LÓGICA: userRegistered=$userRegistered → !userRegistered=$result');
+      return result;
+    }
+    
+    // FALLBACK: Verificar si el usuario está inscrito como "player" o "substitute" (no como "guest")
     final bool isUserRegisteredAsPlayer = players.any((player) => 
         player['userid'] == currentUserId && 
         player['type'] != 'guest'
     );
     
-    print('  - isUserRegisteredAsPlayer: $isUserRegisteredAsPlayer');
+    print('  - isUserRegisteredAsPlayer (fallback): $isUserRegisteredAsPlayer');
     
     // Si está inscrito como player/substitute, mostrar botón de desinscripción
     // Si NO está inscrito como player/substitute, mostrar botón de inscripción
     final bool result = !isUserRegisteredAsPlayer;
-    print('  - Resultado final: $result (${result ? "INSCRIPCIÓN" : "DESINSCRIPCIÓN"})');
+    print('  - Resultado final (fallback): $result (${result ? "INSCRIPCIÓN" : "DESINSCRIPCIÓN"})');
     
     return result;
   }

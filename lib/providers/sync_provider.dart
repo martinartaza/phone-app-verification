@@ -123,6 +123,9 @@ class SyncProvider with ChangeNotifier {
       );
       
       if (result != null) {
+        print('🔍 [SyncProvider] Sync result received, processing...');
+        print('🔍 [SyncProvider] Result response: ${result.response}');
+        
         // Procesar datos
         await _processSyncResponse(result.response);
         
@@ -169,6 +172,11 @@ class SyncProvider with ChangeNotifier {
 
   /// Procesar respuesta de sincronización
   Future<void> _processSyncResponse(SyncResponse response) async {
+    print('🔍 [SyncProvider] _processSyncResponse called');
+    print('🔍 [SyncProvider] Response status: ${response.status}');
+    print('🔍 [SyncProvider] Has data: ${response.hasData}');
+    print('🔍 [SyncProvider] Data: ${response.data}');
+    
     // Actualizar versión y timestamps
     _version = response.version;
     _lastSyncTimestamp = response.lastUpdate;
@@ -186,6 +194,22 @@ class SyncProvider with ChangeNotifier {
     if (response.hasData && response.data!.fulbitos != null) {
       _fulbitosData = response.data!.fulbitos!;
       print('🔄 [SyncProvider] Fulbitos data updated: ${_fulbitosData!.totalMyFulbitos} my fulbitos');
+      
+      // DEBUG: Ver qué datos están llegando del sync
+      print('🔍 [SyncProvider] DEBUG - Fulbitos data:');
+      print('  - myFulbitos: ${_fulbitosData!.myFulbitos}');
+      print('  - memberFulbitos: ${_fulbitosData!.memberFulbitos}');
+      
+      // DEBUG: Verificar si hay userRegistered en los fulbitos
+      for (int i = 0; i < _fulbitosData!.myFulbitos.length; i++) {
+        final fulbito = _fulbitosData!.myFulbitos[i];
+        print('🔍 [SyncProvider] DEBUG - MyFulbito $i:');
+        print('  - id: ${fulbito['id']}');
+        print('  - registration_status: ${fulbito['registration_status']}');
+        if (fulbito['registration_status'] != null) {
+          print('  - user_registered: ${fulbito['registration_status']['user_registered']}');
+        }
+      }
       
       // Guardar fulbitos data localmente
       await _saveFulbitosData();

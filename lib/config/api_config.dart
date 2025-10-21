@@ -54,10 +54,10 @@ class ApiConfig {
   static const String fulbitoInviteEndpoint = '/api/v2/fulbito/';
   static const String fulbitoInviteListEndpoint = '/api/v2/fulbito/';
   static const String fulbitoDetailsEndpoint = '/api/v2/fulbito/';
-  static const String fulbitoRegisterEndpoint = '/api/auth/fulbito/';
-  static const String fulbitoRegisterInviteEndpoint = '/api/auth/fulbito/';
-  static const String fulbitoUnregisterEndpoint = '/api/auth/fulbito/';
-  static const String fulbitoUnregisterInviteEndpoint = '/api/auth/fulbito/';
+  static const String fulbitoRegisterEndpoint = '/api/v2/fulbito/';
+  static const String fulbitoRegisterInviteEndpoint = '/api/v2/fulbito/';
+  static const String fulbitoUnregisterEndpoint = '/api/v2/fulbito/';
+  static const String fulbitoUnregisterInviteEndpoint = '/api/v2/fulbito/';
   
   // Full URLs
   static String get createUserUrl => '$baseUrl$createUserEndpoint';

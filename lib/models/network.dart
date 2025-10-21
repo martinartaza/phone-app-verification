@@ -68,6 +68,7 @@ class RegistrationStatus {
   final List<Map<String, dynamic>> players;
   final int? userPosition;
   final String? userType;
+  final bool? userRegistered;
 
   RegistrationStatus({
     required this.fulbitoId,
@@ -87,6 +88,7 @@ class RegistrationStatus {
     required this.players,
     this.userPosition,
     this.userType,
+    this.userRegistered,
   });
 
   factory RegistrationStatus.fromJson(Map<String, dynamic> json) {
@@ -108,6 +110,7 @@ class RegistrationStatus {
       players: (json['players'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [],
       userPosition: json['user_position'],
       userType: json['user_type'],
+      userRegistered: json['user_registered'],
     );
   }
 }

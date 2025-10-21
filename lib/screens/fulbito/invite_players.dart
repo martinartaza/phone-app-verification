@@ -69,9 +69,11 @@ class _InvitePlayersScreenState extends State<InvitePlayersScreen> {
         child: Consumer<FulbitoProvider>(
           builder: (context, fulbitoProvider, _) {
             final List<_InviteRow> merged = [
-              ...fulbitoProvider.enabledToRegister.map((p) => _InviteRow(player: p, state: _InviteState.invitable)),
-              ...fulbitoProvider.pendingAccept.map((p) => _InviteRow(player: p, state: _InviteState.pending)),
-              ...fulbitoProvider.rejected.map((p) => _InviteRow(player: p, state: _InviteState.rejected)),
+              ...fulbitoProvider.invitablePlayers.map((p) => _InviteRow(player: p, state: _InviteState.invitable)),
+              ...fulbitoProvider.pendingResponsePlayers.map((p) => _InviteRow(player: p, state: _InviteState.pending)),
+              ...fulbitoProvider.rejectedInvitationPlayers.map((p) => _InviteRow(player: p, state: _InviteState.rejected)),
+              ...fulbitoProvider.removedPlayers.map((p) => _InviteRow(player: p, state: _InviteState.removed)),
+              ...fulbitoProvider.leftPlayers.map((p) => _InviteRow(player: p, state: _InviteState.left)),
               ...fulbitoProvider.players.map((p) => _InviteRow(player: p, state: _InviteState.accepted)),
             ];
 
@@ -111,14 +113,48 @@ class _InvitePlayersScreenState extends State<InvitePlayersScreen> {
                       fulbitoProvider.error!,
                       style: const TextStyle(color: Colors.red),
                     )
-                  else if (filtered.isEmpty)
-                    const Text(
-                      'No hay jugadores para mostrar',
-                      style: TextStyle(color: Color(0xFF6B7280)),
-                    )
                   else
                     Column(
-                      children: filtered.map((row) => _buildInviteItem(row)).toList(),
+                      children: [
+                        // Mostrar mensaje de estado vacío solo si existe y no es null
+                        if (fulbitoProvider.invitationEmptyMessage != null && fulbitoProvider.invitationEmptyMessage!.isNotEmpty)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.symmetric(vertical: 16.0),
+                            padding: const EdgeInsets.all(16.0),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6), // Fondo gris claro
+                              borderRadius: BorderRadius.circular(12.0),
+                              border: Border.all(
+                                color: const Color(0xFFE5E7EB), // Borde gris
+                                width: 1.0,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: const Color(0xFF6B7280),
+                                  size: 20.0,
+                                ),
+                                const SizedBox(width: 12.0),
+                                Expanded(
+                                  child: Text(
+                                    fulbitoProvider.invitationEmptyMessage!,
+                                    style: const TextStyle(
+                                      color: Color(0xFF6B7280),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    textAlign: TextAlign.left,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        // Mostrar lista de jugadores (disponibles, pendientes, rechazados, aceptados)
+                        ...filtered.map((row) => _buildInviteItem(row)).toList(),
+                      ],
                     ),
 
                   // Sección de invitación
@@ -222,6 +258,26 @@ class _InvitePlayersScreenState extends State<InvitePlayersScreen> {
           label: 'Rechazó',
           color: const Color(0xFFDC2626),
           bg: const Color(0xFFFEE2E2),
+        );
+        break;
+      case _InviteState.removed:
+        bgColor = const Color(0xFFFFF1F2); // rojo muy claro
+        borderColor = const Color(0xFFFCA5A5);
+        trailing = _pill(
+          icon: Icons.person_off,
+          label: 'Vetado',
+          color: const Color(0xFFDC2626),
+          bg: const Color(0xFFFEE2E2),
+        );
+        break;
+      case _InviteState.left:
+        bgColor = const Color(0xFFFFFBF0); // amarillo muy claro
+        borderColor = const Color(0xFFFDE68A);
+        trailing = _pill(
+          icon: Icons.exit_to_app,
+          label: 'Se fue',
+          color: const Color(0xFFD97706),
+          bg: const Color(0xFFFEF3C7),
         );
         break;
       case _InviteState.accepted:
@@ -449,9 +505,9 @@ class _InvitePlayersScreenState extends State<InvitePlayersScreen> {
 
     // Obtener todos los jugadores
     final allPlayers = [
-      ...fulbitoProvider.enabledToRegister,
-      ...fulbitoProvider.pendingAccept,
-      ...fulbitoProvider.rejected,
+      ...fulbitoProvider.invitablePlayers,
+      ...fulbitoProvider.pendingResponsePlayers,
+      ...fulbitoProvider.rejectedInvitationPlayers,
       ...fulbitoProvider.players,
     ];
 
@@ -499,7 +555,7 @@ class _InvitePlayersScreenState extends State<InvitePlayersScreen> {
   }
 }
 
-enum _InviteState { invitable, pending, rejected, accepted }
+enum _InviteState { invitable, pending, rejected, removed, left, accepted }
 
 class _InviteRow {
   final Player player;

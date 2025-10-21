@@ -14,6 +14,14 @@ class FulbitoProvider with ChangeNotifier {
   List<Player> _pendingAccept = [];
   List<Player> _enabledToRegister = [];
   List<Player> _rejected = [];
+  
+  // Nuevos campos de la API
+  List<Player> _invitablePlayers = [];
+  List<Player> _pendingResponsePlayers = [];
+  List<Player> _rejectedInvitationPlayers = [];
+  List<Player> _removedPlayers = [];
+  List<Player> _leftPlayers = [];
+  String? _invitationEmptyMessage;
   Player? _selectedPlayer;
   bool _isAdmin = false;
   final FulbitoPlayersService _playersService = FulbitoPlayersService();
@@ -30,6 +38,14 @@ class FulbitoProvider with ChangeNotifier {
   List<Player> get pendingAccept => _pendingAccept;
   List<Player> get enabledToRegister => _enabledToRegister;
   List<Player> get rejected => _rejected;
+  
+  // Nuevos getters
+  List<Player> get invitablePlayers => _invitablePlayers;
+  List<Player> get pendingResponsePlayers => _pendingResponsePlayers;
+  List<Player> get rejectedInvitationPlayers => _rejectedInvitationPlayers;
+  List<Player> get removedPlayers => _removedPlayers;
+  List<Player> get leftPlayers => _leftPlayers;
+  String? get invitationEmptyMessage => _invitationEmptyMessage;
   Player? get selectedPlayer => _selectedPlayer;
   bool get isAdmin => _isAdmin;
 
@@ -119,6 +135,10 @@ class FulbitoProvider with ChangeNotifier {
       }).toList();
       
       print('🔍 [FulbitoProvider] ✅ ${_players.length} jugadores cargados del fulbito');
+      
+      // Procesar jugadores de red y estados de invitación
+      _processNetworkPlayers(data);
+      
     } else {
       print('🔍 [FulbitoProvider] ⚠️ No se pudieron obtener detalles del fulbito');
       _players = [];
@@ -158,6 +178,122 @@ class FulbitoProvider with ChangeNotifier {
     _rejected = [];
     
     print('🔍 [FulbitoProvider] Datos cargados desde SyncProvider');
+  }
+
+  /// Procesar jugadores de red y estados de invitación
+  void _processNetworkPlayers(Map<String, dynamic> data) {
+    print('🔍 [FulbitoProvider] Procesando jugadores de red y estados de invitación...');
+    
+    // Procesar jugadores disponibles para invitar
+    final invitableData = data['invitable_players'] as List<dynamic>? ?? [];
+    _invitablePlayers = invitableData.map<Player>((playerData) {
+      final skills = _parseAverageSkills(playerData['average_skills']);
+      return Player(
+        id: playerData['id'] ?? 0,
+        username: playerData['username'] ?? '',
+        phone: playerData['phone'] ?? '',
+        photoUrl: playerData['photo_url'] != null && playerData['photo_url'].toString().isNotEmpty
+            ? (playerData['photo_url'].toString().startsWith('http') 
+                ? playerData['photo_url'].toString() 
+                : 'https://django.sebastianartaza.com${playerData['photo_url']}')
+            : null,
+        typePlayer: 'player',
+        type: 'player',
+        averageSkills: skills,
+      );
+    }).toList();
+    
+    print('🔍 [FulbitoProvider] ✅ ${_invitablePlayers.length} jugadores disponibles para invitar');
+    
+    // Procesar jugadores con invitación pendiente
+    final pendingData = data['pending_response_players'] as List<dynamic>? ?? [];
+    _pendingResponsePlayers = pendingData.map<Player>((playerData) {
+      final skills = _parseAverageSkills(playerData['average_skills']);
+      return Player(
+        id: playerData['id'] ?? 0,
+        username: playerData['username'] ?? '',
+        phone: playerData['phone'] ?? '',
+        photoUrl: playerData['photo_url'] != null && playerData['photo_url'].toString().isNotEmpty
+            ? (playerData['photo_url'].toString().startsWith('http') 
+                ? playerData['photo_url'].toString() 
+                : 'https://django.sebastianartaza.com${playerData['photo_url']}')
+            : null,
+        typePlayer: 'player',
+        type: 'player',
+        averageSkills: skills,
+      );
+    }).toList();
+    
+    print('🔍 [FulbitoProvider] ✅ ${_pendingResponsePlayers.length} jugadores con invitación pendiente');
+    
+    // Procesar jugadores que rechazaron invitación
+    final rejectedData = data['rejected_invitation_players'] as List<dynamic>? ?? [];
+    _rejectedInvitationPlayers = rejectedData.map<Player>((playerData) {
+      final skills = _parseAverageSkills(playerData['average_skills']);
+      return Player(
+        id: playerData['id'] ?? 0,
+        username: playerData['username'] ?? '',
+        phone: playerData['phone'] ?? '',
+        photoUrl: playerData['photo_url'] != null && playerData['photo_url'].toString().isNotEmpty
+            ? (playerData['photo_url'].toString().startsWith('http') 
+                ? playerData['photo_url'].toString() 
+                : 'https://django.sebastianartaza.com${playerData['photo_url']}')
+            : null,
+        typePlayer: 'player',
+        type: 'player',
+        averageSkills: skills,
+      );
+    }).toList();
+    
+    print('🔍 [FulbitoProvider] ✅ ${_rejectedInvitationPlayers.length} jugadores que rechazaron invitación');
+    
+    // Procesar jugadores removidos (vetados)
+    final removedData = data['removed_players'] as List<dynamic>? ?? [];
+    _removedPlayers = removedData.map<Player>((playerData) {
+      final skills = _parseAverageSkills(playerData['average_skills']);
+      return Player(
+        id: playerData['id'] ?? 0,
+        username: playerData['username'] ?? '',
+        phone: playerData['phone'] ?? '',
+        photoUrl: playerData['photo_url'] != null && playerData['photo_url'].toString().isNotEmpty
+            ? (playerData['photo_url'].toString().startsWith('http') 
+                ? playerData['photo_url'].toString() 
+                : 'https://django.sebastianartaza.com${playerData['photo_url']}')
+            : null,
+        typePlayer: 'player',
+        type: 'player',
+        averageSkills: skills,
+      );
+    }).toList();
+    
+    print('🔍 [FulbitoProvider] ✅ ${_removedPlayers.length} jugadores removidos (vetados)');
+    
+    // Procesar jugadores que se fueron (pueden volver)
+    final leftData = data['left_players'] as List<dynamic>? ?? [];
+    _leftPlayers = leftData.map<Player>((playerData) {
+      final skills = _parseAverageSkills(playerData['average_skills']);
+      return Player(
+        id: playerData['id'] ?? 0,
+        username: playerData['username'] ?? '',
+        phone: playerData['phone'] ?? '',
+        photoUrl: playerData['photo_url'] != null && playerData['photo_url'].toString().isNotEmpty
+            ? (playerData['photo_url'].toString().startsWith('http') 
+                ? playerData['photo_url'].toString() 
+                : 'https://django.sebastianartaza.com${playerData['photo_url']}')
+            : null,
+        typePlayer: 'player',
+        type: 'player',
+        averageSkills: skills,
+      );
+    }).toList();
+    
+    print('🔍 [FulbitoProvider] ✅ ${_leftPlayers.length} jugadores que se fueron (pueden volver)');
+    
+    // Procesar mensaje cuando no hay jugadores disponibles
+    _invitationEmptyMessage = data['invitation_empty_message'] as String?;
+    if (_invitationEmptyMessage != null) {
+      print('🔍 [FulbitoProvider] Mensaje de estado vacío: $_invitationEmptyMessage');
+    }
   }
 
   /// Parsear habilidades promedio del jugador
