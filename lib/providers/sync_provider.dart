@@ -183,16 +183,130 @@ class SyncProvider with ChangeNotifier {
     
     // Procesar datos de red
     if (response.hasData && response.data!.network != null) {
-      _networkData = response.data!.network!;
+      if (_networkData == null) {
+        _networkData = response.data!.network!;
+      } else {
+        // UPSERT: Actualizar o agregar conexiones
+        for (final newConnection in response.data!.network!.connections) {
+          final connectionId = newConnection['connection_id'];
+          final existingIndex = _networkData!.connections.indexWhere(
+            (existing) => existing['connection_id'] == connectionId
+          );
+          
+          if (existingIndex >= 0) {
+            // Actualizar conexión existente
+            _networkData!.connections[existingIndex] = newConnection;
+            print('🔄 [SyncProvider] Updated connection: $connectionId');
+          } else {
+            // Agregar nueva conexión
+            _networkData!.connections.add(newConnection);
+            print('➕ [SyncProvider] Added new connection: $connectionId');
+          }
+        }
+        
+        // UPSERT: Actualizar o agregar pending received
+        for (final newPending in response.data!.network!.pendingReceived) {
+          final userId = newPending['user']?['id'];
+          final existingIndex = _networkData!.pendingReceived.indexWhere(
+            (existing) => existing['user']?['id'] == userId
+          );
+          
+          if (existingIndex >= 0) {
+            _networkData!.pendingReceived[existingIndex] = newPending;
+            print('🔄 [SyncProvider] Updated pending received: $userId');
+          } else {
+            _networkData!.pendingReceived.add(newPending);
+            print('➕ [SyncProvider] Added new pending received: $userId');
+          }
+        }
+        
+        // UPSERT: Actualizar o agregar pending sent
+        for (final newPending in response.data!.network!.pendingSent) {
+          final userId = newPending['user']?['id'];
+          final existingIndex = _networkData!.pendingSent.indexWhere(
+            (existing) => existing['user']?['id'] == userId
+          );
+          
+          if (existingIndex >= 0) {
+            _networkData!.pendingSent[existingIndex] = newPending;
+            print('🔄 [SyncProvider] Updated pending sent: $userId');
+          } else {
+            _networkData!.pendingSent.add(newPending);
+            print('➕ [SyncProvider] Added new pending sent: $userId');
+          }
+        }
+      }
       print('🔄 [SyncProvider] Network data updated: ${_networkData!.totalConnections} connections');
+      
+      // DEBUG: Mostrar detalles de las conexiones
+      if (_networkData!.connections.isNotEmpty) {
+        print('🔍 [SyncProvider] DEBUG - Connections:');
+        for (int i = 0; i < _networkData!.connections.length; i++) {
+          final connection = _networkData!.connections[i];
+          print('  - Connection $i: ${connection['username']} (ID: ${connection['id']})');
+        }
+      } else {
+        print('🔍 [SyncProvider] DEBUG - No connections found');
+      }
+      
+      // DEBUG: Mostrar detalles de invitaciones pendientes
+      if (_networkData!.pendingReceived.isNotEmpty) {
+        print('🔍 [SyncProvider] DEBUG - Pending Received:');
+        for (int i = 0; i < _networkData!.pendingReceived.length; i++) {
+          final pending = _networkData!.pendingReceived[i];
+          print('  - Pending $i: ${pending['username']} (ID: ${pending['id']})');
+        }
+      } else {
+        print('🔍 [SyncProvider] DEBUG - No pending received found');
+      }
       
       // Guardar network data localmente
       await _saveNetworkData();
+    } else {
+      print('❌ [SyncProvider] No network data in sync response');
     }
     
     // Procesar datos de fulbitos
     if (response.hasData && response.data!.fulbitos != null) {
-      _fulbitosData = response.data!.fulbitos!;
+      if (_fulbitosData == null) {
+        _fulbitosData = response.data!.fulbitos!;
+      } else {
+        // UPSERT: Actualizar o agregar myFulbitos
+        for (final newFulbito in response.data!.fulbitos!.myFulbitos) {
+          final fulbitoId = newFulbito['id'];
+          final existingIndex = _fulbitosData!.myFulbitos.indexWhere(
+            (existing) => existing['id'] == fulbitoId
+          );
+          
+          if (existingIndex >= 0) {
+            // Actualizar fulbito existente
+            _fulbitosData!.myFulbitos[existingIndex] = newFulbito;
+            print('🔄 [SyncProvider] Updated myFulbito: $fulbitoId');
+          } else {
+            // Agregar nuevo fulbito
+            _fulbitosData!.myFulbitos.add(newFulbito);
+            print('➕ [SyncProvider] Added new myFulbito: $fulbitoId');
+          }
+        }
+        
+        // UPSERT: Actualizar o agregar memberFulbitos
+        for (final newFulbito in response.data!.fulbitos!.memberFulbitos) {
+          final fulbitoId = newFulbito['id'];
+          final existingIndex = _fulbitosData!.memberFulbitos.indexWhere(
+            (existing) => existing['id'] == fulbitoId
+          );
+          
+          if (existingIndex >= 0) {
+            // Actualizar fulbito existente
+            _fulbitosData!.memberFulbitos[existingIndex] = newFulbito;
+            print('🔄 [SyncProvider] Updated memberFulbito: $fulbitoId');
+          } else {
+            // Agregar nuevo fulbito
+            _fulbitosData!.memberFulbitos.add(newFulbito);
+            print('➕ [SyncProvider] Added new memberFulbito: $fulbitoId');
+          }
+        }
+      }
       print('🔄 [SyncProvider] Fulbitos data updated: ${_fulbitosData!.totalMyFulbitos} my fulbitos');
       
       // DEBUG: Ver qué datos están llegando del sync
@@ -333,6 +447,81 @@ class SyncProvider with ChangeNotifier {
     return success;
   }
 
+  /// Forzar sincronización completa sin ETag (fresh data)
+  Future<bool> forceFullSync(String token) async {
+    print('🔄 [SyncProvider] Force FULL sync requested (no ETag)');
+    
+    _setLoading(true);
+    _clearError();
+    
+    try {
+      // Llamada directa a /api/v2/sync/ sin ETag
+      final result = await SyncService.loadAllInitialPages(token: token);
+      
+      if (result.pages.isEmpty) {
+        _setError('No se pudieron cargar datos');
+        return false;
+      }
+
+      // Procesar todas las páginas como si fuera sync inicial
+      await _processInitialPages(result.pages);
+      
+      // DEBUG: Verificar datos procesados ANTES de actualizar ETag
+      print('🔍 [SyncProvider] DEBUG - Datos procesados:');
+      print('  - hasNetworkData: $hasNetworkData');
+      print('  - hasFulbitosData: $hasFulbitosData');
+      if (hasNetworkData) {
+        print('  - networkData.connections: ${_networkData!.connections.length}');
+        print('  - networkData.pendingReceived: ${_networkData!.pendingReceived.length}');
+      }
+      
+      // Solo actualizar ETag y timestamp si hay datos reales
+      if (hasNetworkData || hasFulbitosData) {
+        _currentEtag = result.etag;
+        _lastSyncTimestamp = result.lastUpdate;
+        
+        // Guardar datos específicos
+        if (hasNetworkData) {
+          await _saveNetworkData();
+          print('💾 [SyncProvider] Network data saved to storage');
+        }
+        if (hasFulbitosData) {
+          await _saveFulbitosData();
+          print('💾 [SyncProvider] Fulbitos data saved to storage');
+        }
+        
+        // Guardar estado de sync
+        await _saveSyncState();
+        print('✅ [SyncProvider] ETag y timestamp actualizados');
+      } else {
+        print('⚠️ [SyncProvider] No hay datos nuevos, manteniendo ETag actual');
+      }
+      
+      // CRÍTICO: Notificar a todos los listeners
+      notifyListeners();
+      
+      // DEBUG: Esperar un momento para evitar conflictos con polling
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // DEBUG: Verificar que los datos siguen ahí después del delay
+      print('🔍 [SyncProvider] DEBUG - Verificación post-delay:');
+      print('  - hasNetworkData: $hasNetworkData');
+      if (hasNetworkData) {
+        print('  - networkData.connections: ${_networkData!.connections.length}');
+      }
+      
+      print('✅ [SyncProvider] Force FULL sync completed successfully');
+      return true;
+      
+    } catch (e) {
+      print('❌ [SyncProvider] Force FULL sync failed: $e');
+      _setError('Error en sincronización completa: $e');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   /// Cargar estado de sincronización desde storage
   Future<void> loadSyncState() async {
     try {
@@ -342,10 +531,11 @@ class SyncProvider with ChangeNotifier {
       _currentEtag = etag;
       _lastSyncTimestamp = lastSync;
       
-      print('🔄 [SyncProvider] Sync state loaded: ETag=$etag, LastSync=$lastSync');
-      
       // Cargar datos locales
       await _loadLocalData();
+      
+      // CRÍTICO: Notificar después de cargar datos desde storage
+      notifyListeners();
     } catch (e) {
       print('❌ [SyncProvider] Error loading sync state: $e');
     }
@@ -358,17 +548,20 @@ class SyncProvider with ChangeNotifier {
       final networkDataJson = await storage_service.StorageService.getNetworkData();
       if (networkDataJson != null) {
         _networkData = SyncNetworkData.fromJson(networkDataJson);
-        print('✅ [SyncProvider] Network data loaded from storage');
+        print('💾 Network data cargada: ${_networkData!.connections.length} conexiones, ${_networkData!.pendingReceived.length} invitaciones');
+        print('💾 Network connections: ${_networkData!.connections.map((c) => c['username'] ?? 'Unknown').toList()}');
+      } else {
+        print('❌ No se encontraron datos de network en storage');
       }
       
       // Cargar fulbitos data
       final fulbitosDataJson = await storage_service.StorageService.getFulbitosData();
       if (fulbitosDataJson != null) {
         _fulbitosData = SyncFulbitosData.fromJson(fulbitosDataJson);
-        print('✅ [SyncProvider] Fulbitos data loaded from storage');
+        print('💾 Fulbitos data cargada: ${_fulbitosData!.myFulbitos.length} propios, ${_fulbitosData!.memberFulbitos.length} como miembro');
+      } else {
+        print('❌ No se encontraron datos de fulbitos en storage');
       }
-      
-      notifyListeners();
     } catch (e) {
       print('❌ [SyncProvider] Error loading local data: $e');
     }

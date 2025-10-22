@@ -30,15 +30,11 @@ class InvitationsProvider with ChangeNotifier {
     _syncProvider = syncProvider;
     // Escuchar cambios en el SyncProvider
     _syncProvider!.addListener(_onSyncDataChanged);
-    
-    // Actualizar datos inmediatamente si ya hay datos disponibles
-    _updateDataFromSync();
-    
-    print('✅ [InvitationsProvider] SyncProvider configured and data updated');
   }
 
   /// Callback cuando cambian los datos de sincronización
   void _onSyncDataChanged() {
+    print('🔄 [InvitationsProvider] _onSyncDataChanged triggered');
     if (_syncProvider != null) {
       _updateDataFromSync();
     }
@@ -48,20 +44,22 @@ class InvitationsProvider with ChangeNotifier {
   void _updateDataFromSync() {
     if (_syncProvider!.hasNetworkData) {
       // Convertir datos de sincronización a formato legacy
-      _networkData = _convertSyncNetworkData(_syncProvider!.networkData!);
-      print('🔄 [InvitationsProvider] Network data updated from sync');
-    } else {
-      // Si no hay datos de red, mantener datos vacíos
-      _networkData = NetworkData(network: const [], invitationPending: const []);
+      final newNetworkData = _convertSyncNetworkData(_syncProvider!.networkData!);
+      
+      // Solo actualizar si hay datos reales (no vacíos)
+      if (newNetworkData.network.isNotEmpty || newNetworkData.invitationPending.isNotEmpty) {
+        _networkData = newNetworkData;
+      }
     }
     
     if (_syncProvider!.hasFulbitosData) {
       // Convertir datos de sincronización a formato legacy
-      _fulbitosData = _convertSyncFulbitosData(_syncProvider!.fulbitosData!);
-      print('🔄 [InvitationsProvider] Fulbitos data updated from sync');
-    } else {
-      // Si no hay datos de fulbitos, mantener datos vacíos
-      _fulbitosData = FulbitosData(myFulbitos: const [], acceptFulbitos: const [], pendingFulbitos: const []);
+      final newFulbitosData = _convertSyncFulbitosData(_syncProvider!.fulbitosData!);
+      
+      // Solo actualizar si hay datos reales (no vacíos)
+      if (newFulbitosData.myFulbitos.isNotEmpty || newFulbitosData.acceptFulbitos.isNotEmpty || newFulbitosData.pendingFulbitos.isNotEmpty) {
+        _fulbitosData = newFulbitosData;
+      }
     }
     
     // Limpiar cualquier error previo
@@ -90,15 +88,11 @@ class InvitationsProvider with ChangeNotifier {
           .map((json) => NetworkUser.fromSyncInvitation(json, baseUrl))
           .toList();
       
-      print('🔄 [InvitationsProvider] Converted network data: ${connections.length} connections, ${pendingReceived.length} invitations');
-      
       return NetworkData(
         network: connections,
         invitationPending: pendingReceived,
       );
     } catch (e, stackTrace) {
-      print('❌ [InvitationsProvider] Error converting network data: $e');
-      print('❌ Stack trace: $stackTrace');
       return NetworkData(network: const [], invitationPending: const []);
     }
   }

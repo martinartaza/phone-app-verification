@@ -7,11 +7,18 @@ import 'storage.dart' as storage_service;
 class AuthService {
   static Future<Map<String, dynamic>> createUser(String phoneNumber, String timezone) async {
     try {
+      print('📡 [AuthService] Enviando createUser request...');
+      print('  - phoneNumber: $phoneNumber');
+      print('  - timezone: $timezone');
+      print('  - URL: ${ApiConfig.createUserUrl}');
+      
       final uri = Uri.parse(ApiConfig.createUserUrl);
       final requestBody = jsonEncode({
         'phone_number': phoneNumber,
         'timezone': timezone,
       });
+      
+      print('📡 [AuthService] Request body: $requestBody');
       
       final response = await http.post(
         uri,
@@ -22,19 +29,28 @@ class AuthService {
         body: requestBody,
       );
 
+      print('📡 [AuthService] Response received:');
+      print('  - Status: ${response.statusCode}');
+      print('  - Body: ${response.body}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
+        print('✅ [AuthService] createUser successful');
         return {'success': true, 'message': 'Código enviado exitosamente'};
       } else {
+        print('❌ [AuthService] createUser failed with status ${response.statusCode}');
         // Intentar parsear el mensaje de error del servidor
         try {
           final errorData = jsonDecode(response.body);
           final errorMessage = errorData['message'] ?? errorData['error'] ?? 'Error del servidor';
+          print('❌ [AuthService] Error message: $errorMessage');
           return {'success': false, 'message': errorMessage};
         } catch (e) {
+          print('❌ [AuthService] Error parsing response: $e');
           return {'success': false, 'message': 'Error del servidor (${response.statusCode})'};
         }
       }
     } catch (e) {
+      print('❌ [AuthService] Exception during createUser: $e');
       return {'success': false, 'message': 'Error de conexión: $e'};
     }
   }

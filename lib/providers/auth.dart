@@ -112,16 +112,35 @@ class AuthProvider extends ChangeNotifier {
     _clearError();
     
     try {
-      final result = await auth_service.AuthService.createUser(phoneNumber, timezone);
+      print('📱 [AuthProvider] Enviando código de verificación...');
+      print('  - phoneNumber: $phoneNumber');
+      print('  - timezone: $timezone');
+      
+      // Agregar timeout de 30 segundos
+      final result = await auth_service.AuthService.createUser(phoneNumber, timezone)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              print('⏰ [AuthProvider] Timeout en createUser');
+              return {'success': false, 'message': 'Timeout: El servidor no respondió en 30 segundos'};
+            },
+          );
+      
+      print('📱 [AuthProvider] Resultado de createUser: $result');
+      
       if (result['success']) {
         _phoneNumber = phoneNumber;
+        print('✅ [AuthProvider] Código enviado exitosamente');
         notifyListeners();
         return true;
       } else {
-        _setError(result['message'] ?? 'Error al enviar el código');
+        final errorMessage = result['message'] ?? 'Error al enviar el código';
+        print('❌ [AuthProvider] Error: $errorMessage');
+        _setError(errorMessage);
         return false;
       }
     } catch (e) {
+      print('❌ [AuthProvider] Exception: $e');
       _setError('Error de conexión: $e');
       return false;
     } finally {
