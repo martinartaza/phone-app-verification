@@ -196,11 +196,9 @@ class SyncProvider with ChangeNotifier {
           if (existingIndex >= 0) {
             // Actualizar conexión existente
             _networkData!.connections[existingIndex] = newConnection;
-            print('🔄 [SyncProvider] Updated connection: $connectionId');
           } else {
             // Agregar nueva conexión
             _networkData!.connections.add(newConnection);
-            print('➕ [SyncProvider] Added new connection: $connectionId');
           }
         }
         
@@ -213,10 +211,8 @@ class SyncProvider with ChangeNotifier {
           
           if (existingIndex >= 0) {
             _networkData!.pendingReceived[existingIndex] = newPending;
-            print('🔄 [SyncProvider] Updated pending received: $userId');
           } else {
             _networkData!.pendingReceived.add(newPending);
-            print('➕ [SyncProvider] Added new pending received: $userId');
           }
         }
         
@@ -229,36 +225,12 @@ class SyncProvider with ChangeNotifier {
           
           if (existingIndex >= 0) {
             _networkData!.pendingSent[existingIndex] = newPending;
-            print('🔄 [SyncProvider] Updated pending sent: $userId');
           } else {
             _networkData!.pendingSent.add(newPending);
-            print('➕ [SyncProvider] Added new pending sent: $userId');
           }
         }
       }
       print('🔄 [SyncProvider] Network data updated: ${_networkData!.totalConnections} connections');
-      
-      // DEBUG: Mostrar detalles de las conexiones
-      if (_networkData!.connections.isNotEmpty) {
-        print('🔍 [SyncProvider] DEBUG - Connections:');
-        for (int i = 0; i < _networkData!.connections.length; i++) {
-          final connection = _networkData!.connections[i];
-          print('  - Connection $i: ${connection['username']} (ID: ${connection['id']})');
-        }
-      } else {
-        print('🔍 [SyncProvider] DEBUG - No connections found');
-      }
-      
-      // DEBUG: Mostrar detalles de invitaciones pendientes
-      if (_networkData!.pendingReceived.isNotEmpty) {
-        print('🔍 [SyncProvider] DEBUG - Pending Received:');
-        for (int i = 0; i < _networkData!.pendingReceived.length; i++) {
-          final pending = _networkData!.pendingReceived[i];
-          print('  - Pending $i: ${pending['username']} (ID: ${pending['id']})');
-        }
-      } else {
-        print('🔍 [SyncProvider] DEBUG - No pending received found');
-      }
       
       // Guardar network data localmente
       await _saveNetworkData();

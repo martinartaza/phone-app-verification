@@ -142,7 +142,7 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
           // Mock: mostrar mensaje de actualización
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Fulbito actualizado (mock)'),
+              content: Text('Fulbito actualizado'),
               backgroundColor: Colors.green,
             ),
           );
