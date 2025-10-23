@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/network.dart';
 import '../../models/player.dart';
 import '../../services/fulbito/fulbito_players.dart';
 import '../../services/fulbito/fulbito_registration.dart';
 import '../../services/fulbito/fulbito_details.dart';
+import '../../services/fulbito.dart';
+import '../../services/api_client.dart';
 import '../sync_provider.dart';
 
 class FulbitoProvider with ChangeNotifier {
@@ -26,6 +29,7 @@ class FulbitoProvider with ChangeNotifier {
   bool _isAdmin = false;
   final FulbitoPlayersService _playersService = FulbitoPlayersService();
   final FulbitoRegistrationService _registrationService = FulbitoRegistrationService();
+  final FulbitoService _fulbitoService = FulbitoService();
   
   // Referencia al SyncProvider para usar datos en memoria
   SyncProvider? _syncProvider;
@@ -407,6 +411,61 @@ class FulbitoProvider with ChangeNotifier {
   void removePlayer(Player player) {
     if (_isAdmin) {
       _players.removeWhere((p) => p.id == player.id);
+      notifyListeners();
+    }
+  }
+
+  // Actualizar fulbito
+  Future<bool> updateFulbito({
+    required String token,
+    required int fulbitoId,
+    required Map<String, dynamic> updates,
+    required BuildContext context,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
+    try {
+      print('🔄 [FulbitoProvider] Actualizando fulbito $fulbitoId...');
+      print('🔄 [FulbitoProvider] Updates: $updates');
+      
+      // Usar ApiClient con callback de sync automático
+      final apiClient = ApiClient(
+        token: token,
+        onSyncRequired: (token) async {
+          print('🔄 [FulbitoProvider] Sync triggered by ApiClient');
+          try {
+            final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+            print('🔄 [FulbitoProvider] SyncProvider obtained, starting sync...');
+            await syncProvider.performIncrementalSync(token);
+            print('✅ [FulbitoProvider] Sync completed successfully');
+          } catch (e) {
+            print('❌ [FulbitoProvider] Error during sync: $e');
+          }
+        },
+      );
+      
+      final success = await _fulbitoService.updateFulbitoWithClient(apiClient, fulbitoId, updates);
+      
+      if (success) {
+        print('✅ [FulbitoProvider] Fulbito actualizado exitosamente');
+        // Recargar los detalles del fulbito después de la actualización
+        if (_currentFulbito != null) {
+          await loadFulbitoDetails(_currentFulbito!, '', token);
+        }
+      } else {
+        print('❌ [FulbitoProvider] Error al actualizar fulbito');
+        _error = 'Error al actualizar el fulbito';
+      }
+      
+      return success;
+    } catch (e) {
+      print('❌ [FulbitoProvider] Exception during update: $e');
+      _error = 'Error al actualizar fulbito: $e';
+      return false;
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }

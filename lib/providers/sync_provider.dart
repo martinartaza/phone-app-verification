@@ -115,6 +115,10 @@ class SyncProvider with ChangeNotifier {
       print('🔄 [SyncProvider] Starting incremental sync...');
       print('🔄 [SyncProvider] ETag: $_currentEtag');
       print('🔄 [SyncProvider] Last Sync: $_lastSyncTimestamp');
+      print('🔄 [SyncProvider] Current network data before sync:');
+      print('  - Connections: ${_networkData?.connections.length ?? 0}');
+      print('  - Pending Received: ${_networkData?.pendingReceived.length ?? 0}');
+      print('  - Pending Sent: ${_networkData?.pendingSent.length ?? 0}');
       
       final result = await SyncService.syncIncremental(
         token: token,
@@ -183,8 +187,21 @@ class SyncProvider with ChangeNotifier {
     
     // Procesar datos de red
     if (response.hasData && response.data!.network != null) {
+      print('🔄 [SyncProvider] Processing network data...');
+      print('🔄 [SyncProvider] Network data from server:');
+      print('  - Connections: ${response.data!.network!.connections.length}');
+      print('  - Pending Received: ${response.data!.network!.pendingReceived.length}');
+      print('  - Pending Sent: ${response.data!.network!.pendingSent.length}');
+      print('🔄 [SyncProvider] Network ETag from server: ${response.data!.network!.version}');
+      print('🔄 [SyncProvider] Network changed flag: ${response.data!.network!.changed}');
+      print('🔄 [SyncProvider] Current local network data:');
+      print('  - Connections: ${_networkData?.connections.length ?? 0}');
+      print('  - Pending Received: ${_networkData?.pendingReceived.length ?? 0}');
+      print('  - Pending Sent: ${_networkData?.pendingSent.length ?? 0}');
+      
       if (_networkData == null) {
         _networkData = response.data!.network!;
+        print('🔄 [SyncProvider] Initializing network data from server');
       } else {
         // UPSERT: Actualizar o agregar conexiones
         for (final newConnection in response.data!.network!.connections) {
@@ -231,9 +248,14 @@ class SyncProvider with ChangeNotifier {
         }
       }
       print('🔄 [SyncProvider] Network data updated: ${_networkData!.totalConnections} connections');
+      print('🔄 [SyncProvider] Final network data after processing:');
+      print('  - Connections: ${_networkData!.connections.length}');
+      print('  - Pending Received: ${_networkData!.pendingReceived.length}');
+      print('  - Pending Sent: ${_networkData!.pendingSent.length}');
       
       // Guardar network data localmente
       await _saveNetworkData();
+      print('🔄 [SyncProvider] Network data saved to local storage');
     } else {
       print('❌ [SyncProvider] No network data in sync response');
     }

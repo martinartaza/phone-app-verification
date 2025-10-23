@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/fulbito_creation.dart';
+import '../services/api_client.dart';
 
 class FulbitoService {
   Future<bool> createFulbito(String token, FulbitoCreation fulbito) async {
@@ -54,6 +55,31 @@ class FulbitoService {
         body: jsonEncode(updates),
       );
 
+      print('⚽ Response Status: ${response.statusCode}');
+      print('⚽ Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('✅ Fulbito updated successfully');
+        return true;
+      } else {
+        print('❌ API Error: ${response.statusCode} - ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error updating fulbito: $e');
+      return false;
+    }
+  }
+
+  Future<bool> updateFulbitoWithClient(ApiClient apiClient, int fulbitoId, Map<String, dynamic> updates) async {
+    try {
+      final url = ApiConfig.getUpdateFulbitoUrl(fulbitoId);
+      
+      print('⚽ API CALL - PUT ${ApiConfig.updateFulbitoEndpoint}$fulbitoId/update/');
+      print('⚽ Body: ${jsonEncode(updates)}');
+
+      final response = await apiClient.put(url, body: updates);
+      
       print('⚽ Response Status: ${response.statusCode}');
       print('⚽ Response Body: ${response.body}');
 

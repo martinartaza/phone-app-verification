@@ -138,14 +138,43 @@ class _FulbitoDetailsScreenState extends State<FulbitoDetailsScreen> with Single
         initialCapacity: widget.fulbito.capacity,
         isEditMode: true,
         saveButtonText: 'Actualizar Fulbito',
-        onSave: (name, place, day, hour, registrationDay, registrationHour, invitationGuestStartDay, invitationGuestStartHour, capacity) {
-          // Mock: mostrar mensaje de actualización
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Fulbito actualizado'),
-              backgroundColor: Colors.green,
-            ),
-          );
+        onSave: (name, place, day, hour, registrationDay, registrationHour, invitationGuestStartDay, invitationGuestStartHour, capacity) async {
+          // Actualizar fulbito usando el provider con patrón de sync
+          final authProvider = Provider.of<auth_provider.AuthProvider>(context, listen: false);
+          final fulbitoProvider = Provider.of<FulbitoProvider>(context, listen: false);
+          
+          if (authProvider.token != null) {
+            final success = await fulbitoProvider.updateFulbito(
+              token: authProvider.token!,
+              fulbitoId: widget.fulbito.id,
+              updates: {
+                'name': name,
+                'place': place,
+                'day': day,
+                'hour': hour,
+                'registration_start_day': registrationDay,
+                'registration_start_hour': registrationHour,
+                'capacity': capacity,
+              },
+              context: context,
+            );
+            
+            if (success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Fulbito actualizado correctamente'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Error al actualizar el fulbito'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
         },
       ),
     );
