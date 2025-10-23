@@ -61,10 +61,10 @@ class SyncService {
     String? etag,
   }) async {
     try {
-      final url = Uri.parse(ApiConfig.getSyncUrl(lastSync));
+      final url = Uri.parse(ApiConfig.getSyncUrl()); // Sin parámetros de query
       
       print('🔄 SYNC INCREMENTAL - GET ${ApiConfig.syncEndpoint}');
-      if (lastSync != null) print('🔄 Query: last_sync=$lastSync');
+      if (lastSync != null) print('🔄 Header: LastSync=$lastSync');
       if (etag != null) print('🔄 Header: If-None-Match=$etag');
       print('🔄 Headers: Authorization: Bearer $token');
 
@@ -76,6 +76,11 @@ class SyncService {
       // Agregar ETag si está disponible
       if (etag != null) {
         headers['If-None-Match'] = etag;
+      }
+      
+      // Agregar LastSync como header si está disponible
+      if (lastSync != null) {
+        headers['LastSync'] = lastSync;
       }
 
       final response = await http.get(
